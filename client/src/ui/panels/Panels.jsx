@@ -1,27 +1,20 @@
-import { useGame } from '../../store/game'
-import DailyRewardsPanel from './DailyRewardsPanel'
-import ItemsPanel from './ItemsPanel'
-import LeaderboardsPanel from './LeaderboardsPanel'
-import PetsPanel from './PetsPanel'
-import RebirthPanel from './RebirthPanel'
-import StorePanel from './StorePanel'
-import WelcomeBackPanel from './WelcomeBackPanel'
+import { lazy, Suspense } from 'react'
 
-const PANELS = {
-  pets: PetsPanel,
-  rebirth: RebirthPanel,
-  daily: DailyRewardsPanel,
-  items: ItemsPanel,
-  offline: WelcomeBackPanel,
-  store: StorePanel,
-  leaderboards: LeaderboardsPanel,
-}
+import { useGame } from '../../store/game'
+import { PANEL_LOADERS } from './panelLoaders'
+
+const PANELS = Object.fromEntries(Object.entries(PANEL_LOADERS).map(([id, load]) => [id, lazy(load)]))
 
 /** Mounts whichever modal panel is open. Only one at a time, like the reference. */
 export function Panels() {
   const panel = useGame((s) => s.panel)
   const Component = PANELS[panel]
-  return Component ? <Component /> : null
+  if (!Component) return null
+  return (
+    <Suspense fallback={null}>
+      <Component />
+    </Suspense>
+  )
 }
 
 export default Panels

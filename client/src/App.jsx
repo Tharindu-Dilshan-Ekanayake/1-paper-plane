@@ -7,6 +7,7 @@ import HatchOverlay from './ui/HatchOverlay'
 import HUD from './ui/hud/HUD'
 import LoadingScreen from './ui/LoadingScreen'
 import NameplateLayer from './ui/NameplateLayer'
+import { prefetchPanels } from './ui/panels/panelLoaders'
 import Panels from './ui/panels/Panels'
 import PopupLayer from './ui/PopupLayer'
 import TouchControls from './ui/TouchControls'
@@ -24,6 +25,7 @@ function App() {
   useEffect(() => {
     if (!ready) return
     requestAnimationFrame(() => performance.mark('pp:hud-shown'))
+    prefetchPanels()
   }, [ready])
 
   return (

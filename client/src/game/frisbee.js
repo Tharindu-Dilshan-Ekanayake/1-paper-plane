@@ -97,7 +97,8 @@ function frisbeeBaseGeometry() {
   if (!baseGeometry) {
     baseGeometry = new LatheGeometry(
       PROFILE.map(([r, h]) => new Vector2(r, h)),
-      32,
+      // 24 sides: round enough at the size frisbees are seen, and the shop shows 20.
+      24,
     )
   }
   return baseGeometry
