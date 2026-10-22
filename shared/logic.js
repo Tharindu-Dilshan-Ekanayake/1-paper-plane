@@ -92,6 +92,8 @@ export function normalizeProfile(raw, id, name) {
     : []
   p.ownedPlanes = Array.isArray(raw.ownedPlanes) && raw.ownedPlanes.length ? raw.ownedPlanes : ['paper']
   if (!p.ownedPlanes.includes(p.equippedPlane)) p.equippedPlane = p.ownedPlanes[0]
+  // The tutorial is for brand-new players only: anyone who has rebirthed is past it.
+  if (p.rebirths > 0) p.tutorialStep = TUTORIAL.length
   p.v = PROFILE_VERSION
   return p
 }
@@ -210,6 +212,7 @@ export function applyClick(profile, now) {
 export function applyRebirth(profile) {
   if (!isMaxLevel(profile)) return { ok: false, error: `Reach level ${levelCap(profile.rebirths)} first!` }
   profile.rebirths += 1
+  profile.tutorialStep = TUTORIAL.length
   profile.power = 0
   profile.level = 1
   profile.levelProgress = 0

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { EGGS, levelCap, PLANES, SHOP } from '../../shared/balance.js'
+import { EGGS, levelCap, PLANES, SHOP, TUTORIAL } from '../../shared/balance.js'
 import { formatNumber } from '../../shared/format.js'
 import {
   applyRebirth,
@@ -138,6 +138,13 @@ test('click throws train at x1, rate limited and not in the throw area', () => {
   Object.assign(pos, { x: 0, z: -33 })
   s.handle('click', {}, 2000)
   assert.equal(p.power, 2)
+})
+
+test('only brand-new players get the tutorial', () => {
+  const fresh = normalizeProfile({ rebirths: 0, tutorialStep: 1 }, 'a', 'A')
+  assert.equal(fresh.tutorialStep, 1)
+  const reborn = normalizeProfile({ rebirths: 1, level: 0, tutorialStep: 1 }, 'b', 'B')
+  assert.equal(reborn.tutorialStep, TUTORIAL.length)
 })
 
 test('the shop sells for Wins only', () => {
