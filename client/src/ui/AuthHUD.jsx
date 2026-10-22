@@ -1,28 +1,26 @@
 import { useBloxity } from '../bloxity/BloxityContext'
 import StrokeText from './StrokeText'
-import { ChunkyButton } from './hud/parts'
 import { GRADIENTS, u } from './hud/style'
 
-const LOGIN_GRADIENT = 'linear-gradient(180deg, #c7a6ff 0%, #8b5cff 50%, #5b2be0 100%)'
-
 /**
- * Your name tag, in the top-right corner: picture, name and the log in / out button.
+ * Your name tag, in the top-right corner: picture and name.
  *
- * Uses the `getUser() || getGuest()` pattern (surfaced as `identity` on the context)
- * so there is always a name and picture to show, even before the player logs in.
+ * No log in / out here: players arrive already signed in to their Bloxity account, and
+ * anyone without one plays as a guest. `identity` is `getUser() || getGuest()`, so there
+ * is always a name and picture to show.
  */
 export function AuthHUD() {
-  const { identity, isLoggedIn, login, logout, status } = useBloxity()
+  const { identity } = useBloxity()
 
   const name = identity?.displayName || identity?.username || 'Guest'
   const pfp = identity?.pfp
 
   return (
     <div
-      className="pointer-events-auto flex items-center"
+      className="pointer-events-none flex items-center"
       style={{
         height: u(64),
-        padding: `0 ${u(10)} 0 ${u(6)}`,
+        padding: `0 ${u(18)} 0 ${u(6)}`,
         gap: u(10),
         borderRadius: u(32),
         background: 'linear-gradient(180deg, rgba(58, 68, 98, 0.94), rgba(26, 30, 46, 0.94))',
@@ -48,26 +46,6 @@ export function AuthHUD() {
       <span className="max-w-[26vw] truncate" style={{ fontSize: u(28) }}>
         <StrokeText stroke={u(6)}>{name}</StrokeText>
       </span>
-      {isLoggedIn ? (
-        <ChunkyButton gradient={GRADIENTS.greyButton} onClick={logout} radius={12} border={3} style={{ height: u(40), padding: `0 ${u(12)}` }}>
-          <span style={{ fontSize: u(20) }}>
-            <StrokeText stroke={u(5)}>Log out</StrokeText>
-          </span>
-        </ChunkyButton>
-      ) : (
-        <ChunkyButton
-          gradient={LOGIN_GRADIENT}
-          onClick={login}
-          disabled={status !== 'ready'}
-          radius={12}
-          border={3}
-          style={{ height: u(40), padding: `0 ${u(14)}` }}
-        >
-          <span style={{ fontSize: u(20) }}>
-            <StrokeText stroke={u(5)}>{status === 'ready' ? 'Log in' : '…'}</StrokeText>
-          </span>
-        </ChunkyButton>
-      )}
     </div>
   )
 }

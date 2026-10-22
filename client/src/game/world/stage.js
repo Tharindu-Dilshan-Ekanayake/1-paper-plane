@@ -12,6 +12,12 @@ const GOLD = '#ffd21f'
 const BUNTING = ['#ff3b5c', '#ffd21f', '#2fc6ff', '#4ef05a', '#b15cff']
 
 const DISC = new CylinderGeometry(1, 1, 1, 32)
+
+/**
+ * The THROW! sign on the arch's beam, centred on it: its panel's size and the height of
+ * its middle. Its face is 1.0 in front of the beam's centre line.
+ */
+export const ARCH_SIGN = { width: 9.6, height: 2.7, y: STAGE.height + 9.6, faceZ: STAGE.minZ + 1 + 0.95 }
 const LAMP = new CylinderGeometry(1, 0.75, 1, 12)
 const RIM = new TorusGeometry(1, 0.11, 8, 40)
 
@@ -113,10 +119,14 @@ export function buildStage(blocks, props, { detail = true } = {}) {
   blocks.addOn(0, archTop - 0.2, archZ, width - 1, 1.4, 1.2, BLUE, STYLE.STRIPES)
   blocks.addOn(0, archTop - 0.45, archZ, width - 2.6, 0.25, 1.3, SKY, STYLE.GLOW)
   blocks.addOn(0, archTop + 1.2, archZ, width - 4, 0.3, 1, '#ffffff', STYLE.RAINBOW)
+  // The THROW! sign hung on the beam's face: a navy panel in a blue frame, with the
+  // lettering painted on it (see throwArea.js, ARCH_SIGN).
+  blocks.addOn(0, ARCH_SIGN.y - ARCH_SIGN.height / 2 - 0.15, archZ + 0.75, ARCH_SIGN.width + 0.6, ARCH_SIGN.height + 0.3, 0.3, BLUE)
+  blocks.addOn(0, ARCH_SIGN.y - ARCH_SIGN.height / 2, archZ + 0.8, ARCH_SIGN.width, ARCH_SIGN.height, 0.3, NAVY, STYLE.SMOOTH)
   // Marquee bulbs along the beam's face, either side of the sign.
   if (detail) {
     for (let x = -9; x <= 9.01; x += 1) {
-      if (Math.abs(x) < 5) continue
+      if (Math.abs(x) < ARCH_SIGN.width / 2 + 0.7) continue
       blocks.add(x, archTop + 0.85, archZ + 0.68, 0.3, 0.3, 0.16, Math.abs(x) % 2 ? GOLD : '#ffffff', STYLE.GLOW)
       blocks.add(x + 0.5, archTop + 0.05, archZ + 0.68, 0.3, 0.3, 0.16, Math.abs(x) % 2 ? '#ffffff' : GOLD, STYLE.GLOW)
     }

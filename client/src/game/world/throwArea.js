@@ -2,6 +2,8 @@ import { CanvasTexture, LinearMipmapLinearFilter, MeshBasicMaterial, PlaneGeomet
 
 import { SHOP_BOARD, STAGE, THROW_AREA } from '@shared/world'
 
+import { ARCH_SIGN } from './stage'
+
 const FONT = '"Fredoka One", "Arial Rounded MT Bold", sans-serif'
 
 /**
@@ -69,7 +71,8 @@ function paintText(text, maxTexture, { aspect, fill, edge, slant = 0.22, worldWi
 
 /**
  * The painted signs, drawn once the font has loaded: "THROW AREA" across the throw
- * pad and "FRISBEES" on the shop's board.
+ * pad, "THROW!" on the arch and "FRISBEES" on the shop's board. Each sits a couple of
+ * centimetres proud of what it's painted on, so it can't sink into it.
  *
  * @param {number} maxTexture texture size cap for the preset
  * @returns {Promise<Array<{ geometry, material, texture, position: number[], rotation: number[] }>>}
@@ -96,9 +99,19 @@ export async function createPaintedSigns(maxTexture) {
     slant: 0.14,
     worldWidth: boardWidth,
   })
-  // On the board's face, turned to the plaza (west).
-  board.position = [SHOP_BOARD.x - 0.36, SHOP_BOARD.top - 4.1, (SHOP_BOARD.minZ + SHOP_BOARD.maxZ) / 2]
+  // On the board's navy face (0.4 west of its centre line), turned to the plaza.
+  board.position = [SHOP_BOARD.x - 0.43, SHOP_BOARD.top - 4.1, (SHOP_BOARD.minZ + SHOP_BOARD.maxZ) / 2]
   board.rotation = [0, -Math.PI / 2, 0]
 
-  return [throwArea, board]
+  const arch = paintText('THROW!', maxTexture, {
+    aspect: 0.3,
+    fill: ['#fffbd0', '#ffd21f', '#ff8a00'],
+    edge: '#c2410c',
+    slant: 0.14,
+    worldWidth: ARCH_SIGN.width - 0.3,
+  })
+  arch.position = [0, ARCH_SIGN.y, ARCH_SIGN.faceZ + 0.03]
+  arch.rotation = [0, 0, 0]
+
+  return [throwArea, board, arch]
 }
