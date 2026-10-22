@@ -134,6 +134,12 @@ export function FollowCamera() {
       _target.z + Math.cos(yaw) * horizontal,
     )
 
+    // After a flight the camera is kilometres away; jump back rather than swoop.
+    if (runtime.camera.snap) {
+      runtime.camera.snap = false
+      initialised.current = false
+    }
+
     if (!initialised.current) {
       // Avoid a long swoop in from wherever the default camera started.
       camera.position.copy(_desired)

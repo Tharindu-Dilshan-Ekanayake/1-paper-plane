@@ -1,9 +1,11 @@
 import { useGame } from '../../store/game'
 import AutoRebirthToggle from './AutoRebirthToggle'
+import FlightOverlay from './FlightOverlay'
 import LeftMenu from './LeftMenu'
 import PowerBar from './PowerBar'
 import RightButtons from './RightButtons'
 import StatsPanel from './StatsPanel'
+import ThrowButton from './ThrowButton'
 import Toasts from './Toasts'
 import TopBar from './TopBar'
 import TopCenter from './TopCenter'
@@ -18,16 +20,20 @@ import TopCenter from './TopCenter'
  */
 export function HUD() {
   const panelOpen = useGame((s) => s.panel !== null)
+  // While a plane is in the air the side menus clear out, as in the reference.
+  const watching = useGame((s) => Boolean(s.flight || s.throwResult))
   return (
     <div className="pp-font pointer-events-none absolute inset-0 z-20 select-none">
       <div className="absolute inset-0 transition-opacity duration-150" style={{ opacity: panelOpen ? 0 : 1, visibility: panelOpen ? 'hidden' : 'visible' }}>
         <TopBar />
         <TopCenter />
-        <LeftMenu />
-        <RightButtons />
+        {!watching && <LeftMenu />}
+        {!watching && <RightButtons />}
         <StatsPanel />
         <PowerBar />
-        <AutoRebirthToggle />
+        {!watching && <AutoRebirthToggle />}
+        <ThrowButton />
+        <FlightOverlay />
       </div>
       <Toasts />
     </div>

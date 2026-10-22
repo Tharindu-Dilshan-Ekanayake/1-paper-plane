@@ -1,3 +1,4 @@
+import { beginFlight } from '../game/flight/flightControl'
 import { queueTrainFx } from '../game/fx/fxQueue'
 import { getGame } from '../store/game'
 
@@ -20,6 +21,10 @@ export function handleServerEvent(type, payload) {
         lastLane: payload.lane,
       })
       queueTrainFx(payload)
+      break
+
+    case 'throw':
+      beginFlight(payload)
       break
 
     case 'toast':

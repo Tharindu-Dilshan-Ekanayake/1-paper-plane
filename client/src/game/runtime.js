@@ -39,6 +39,8 @@ export const runtime = {
     yaw: 0,
     pitch: 0.36,
     distance: 11,
+    /** Set to jump the follow camera straight to its target next frame. */
+    snap: false,
   },
 
   /** What the sun's shadow box centres on while the camera chases a thrown plane. */

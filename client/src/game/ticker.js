@@ -15,6 +15,8 @@ import { getGame, useGame } from '../store/game'
 import { runtime } from './runtime'
 
 const TICK_MS = 100
+/** Minimum gap between automatic throws, on top of the flight itself. */
+const AUTO_THROW_GAP_MS = 1200
 
 function sameZone(a, b) {
   return (
@@ -46,6 +48,7 @@ function syncLockedLanes(profile) {
  */
 export function startGameTicker() {
   let lastLane = -1
+  let nextAutoThrow = 0
 
   syncLockedLanes(getGame().profile)
   const unsubscribe = useGame.subscribe((state, prev) => {
@@ -70,6 +73,14 @@ export function startGameTicker() {
       if (zone.lane >= 0 && isLaneUnlocked(game.profile, zone.lane)) actions.enterLane(zone.lane)
       else if (lastLane >= 0) actions.leaveLane()
       lastLane = zone.lane
+    }
+
+    // Auto Throw (premium): keep throwing while standing in the throw area.
+    const { passes, settings } = game.profile
+    const now = Date.now()
+    if (zone.throwArea && passes.autoThrow && settings.autoThrow && !game.flight && !game.throwResult && now >= nextAutoThrow) {
+      nextAutoThrow = now + AUTO_THROW_GAP_MS
+      actions.throwPlane()
     }
   }
 

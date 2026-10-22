@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { useQuality } from '../../store/quality'
 import { BlockSet, disposeBlocks, PropBuilder } from '../blocks'
@@ -6,6 +6,7 @@ import { createToyMaterial, sharedMaterials } from '../materials'
 import { createGroundGeometry, createGroundMap } from './ground'
 import { buildHangar, buildLanes } from './structures'
 import { buildTargets } from './targets'
+import { createThrowAreaDecal } from './throwArea'
 import { buildTerrain } from './terrain'
 
 /**
@@ -18,6 +19,30 @@ import { buildTerrain } from './terrain'
  */
 export function World() {
   const shadows = useQuality((s) => s.settings.shadows === 'realtime')
+  const [decal, setDecal] = useState(null)
+
+  useEffect(() => {
+    let made = null
+    let cancelled = false
+    createThrowAreaDecal(useQuality.getState().settings.maxTexture).then((d) => {
+      if (cancelled) {
+        d.geometry.dispose()
+        d.material.dispose()
+        d.texture.dispose()
+        return
+      }
+      made = d
+      setDecal(d)
+    })
+    return () => {
+      cancelled = true
+      if (made) {
+        made.geometry.dispose()
+        made.material.dispose()
+        made.texture.dispose()
+      }
+    }
+  }, [])
 
   const { blocks, ground, props } = useMemo(() => {
     const { decorDensity, maxTexture } = useQuality.getState().settings
@@ -55,6 +80,7 @@ export function World() {
       <mesh geometry={ground.geometry} material={ground.material} receiveShadow={shadows} />
       <primitive object={blocks} castShadow={shadows} receiveShadow={shadows} />
       {props && <mesh geometry={props} material={sharedMaterials().props} castShadow={shadows} receiveShadow={shadows} />}
+      {decal && <mesh geometry={decal.geometry} material={decal.material} position={decal.position} renderOrder={1} />}
     </>
   )
 }

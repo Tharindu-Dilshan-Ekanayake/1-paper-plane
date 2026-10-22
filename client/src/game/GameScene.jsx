@@ -23,6 +23,10 @@ const DevPerf = import.meta.env.DEV
   : null
 const showDevPerf = import.meta.env.DEV && new URLSearchParams(window.location.search).has('perf')
 
+// The track and flight are their own chunk, fetched once the lobby is on screen so they
+// never delay time-to-playable.
+const Flight = lazy(() => import('./flight/Flight'))
+
 /**
  * Fires `onFirstFrame` after the renderer has actually drawn once.
  * "Ready" should mean "the player can see the game", not "React mounted".
@@ -133,6 +137,11 @@ export function GameScene({ onReady }) {
         <Player onAvatarReady={handleAvatarReady} />
         <BlobShadows />
         <TrainingFX />
+        {avatarReady && firstFrame && (
+          <Suspense fallback={null}>
+            <Flight />
+          </Suspense>
+        )}
 
         <FollowCamera />
         <FirstFrameSignal onFirstFrame={handleFirstFrame} />

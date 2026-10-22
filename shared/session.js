@@ -2,6 +2,7 @@ import { LANES, PRODUCTS, TRAIN_INTERVAL } from './balance.js'
 import {
   advanceTutorial,
   applyRebirth,
+  applyThrow,
   applyTrain,
   awardBadge,
   createSession,
@@ -10,10 +11,12 @@ import {
   isLaneUnlocked,
   isMaxLevel,
 } from './logic.js'
-import { laneRect, inRect } from './world.js'
+import { inRect, inThrowArea, laneRect } from './world.js'
 
 /** How far outside a lane's floor still counts as "in" it (network jitter). */
 const LANE_SLACK = 0.8
+/** Same for the throw area. */
+const THROW_SLACK = 1.5
 
 /**
  * One player's authoritative session: validates intents, runs the training tick and
@@ -26,8 +29,11 @@ const LANE_SLACK = 0.8
  * Events emitted (type, payload):
  * - 'profile'  { profile, session }  full state, after anything structural
  * - 'train'    { gain, power, level, levelProgress, leveledUp }  each training throw
+ * - 'throw'    { distance, wins, trophies, duration, multiplier }  a throw to replay
  * - 'toast'    { text, kind }
  * - 'badge'    { id, name }
+ *
+ * `onThrow(result)` lets the host tell other players about a throw (ghost planes).
  */
 export class PlayerSession {
   /**
@@ -39,7 +45,7 @@ export class PlayerSession {
    *   `mockPurchases` grants premium products on request with no payment (dev and
    *   offline only). `onPurchase` lets the host veto or count a grant (stock limits).
    */
-  constructor(profile, { now, emit, getPosition, getFriends = () => 0, mockPurchases = false, onPurchase }) {
+  constructor(profile, { now, emit, getPosition, getFriends = () => 0, mockPurchases = false, onPurchase, onThrow }) {
     this.profile = profile
     this.session = createSession(now)
     this.emit = emit
@@ -47,6 +53,7 @@ export class PlayerSession {
     this.getFriends = getFriends
     this.mockPurchases = mockPurchases
     this.onPurchase = onPurchase
+    this.onThrow = onThrow
 
     /** Lane the client says it's in; verified against position every tick. */
     this.lane = -1
@@ -128,6 +135,30 @@ export class PlayerSession {
     rebirth() {
       const result = this.fail(applyRebirth(this.profile))
       if (result.ok) this.afterRebirth()
+    },
+
+    throw(_payload, now) {
+      if (now < this.busyUntil) return
+      const p = this.getPosition()
+      if (!inThrowArea(p.x, p.z, THROW_SLACK)) {
+        this.toast('Go to the THROW AREA to throw!', 'error')
+        return
+      }
+      const result = applyThrow(this.profile, now)
+      this.busyUntil = now + result.cooldown * 1000
+      this.emit('throw', {
+        distance: result.distance,
+        wins: result.wins,
+        trophies: result.trophies,
+        duration: result.duration,
+        multiplier: result.multiplier,
+      })
+      this.onThrow?.(result)
+      // The HUD holds the new Wins back until landing; the profile can go now.
+      this.dirty = true
+      this.tutorial('throw')
+      this.badge('firstThrow')
+      if (result.distance >= 1000) this.badge('kilometer')
     },
 
     purchase({ productId }, now) {
