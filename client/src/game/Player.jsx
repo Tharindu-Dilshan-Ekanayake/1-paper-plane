@@ -4,6 +4,7 @@ import { Quaternion, Vector3 } from 'three'
 
 import { clampToWalkable, groundHeightAt, STATIC_COLLIDERS } from '@shared/world'
 
+import { sfx } from '../audio/sfx'
 import { getGame } from '../store/game'
 import { getQuality } from '../store/quality'
 import ErrorBoundary from '../ui/ErrorBoundary'
@@ -208,11 +209,14 @@ export function Player({ onAvatarReady }) {
     if (wantJump && player.grounded) {
       vy.current = JUMP_SPEED
       player.grounded = false
+      sfx.jump()
     }
     vy.current -= GRAVITY * delta
     pos.y += vy.current * delta
 
     if (pos.y <= floor) {
+      // Coming down from a jump (not just stepping off a kerb) lands with a thump.
+      if (!player.grounded && vy.current < -5) sfx.jumpLand()
       pos.y = floor
       vy.current = 0
       player.grounded = true

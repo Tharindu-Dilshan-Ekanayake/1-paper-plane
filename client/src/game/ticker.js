@@ -11,6 +11,7 @@ import {
   SPHINX_STAND,
 } from '@shared/world'
 
+import { sfx } from '../audio/sfx'
 import { actions } from '../net/actions'
 import { getGame, useGame } from '../store/game'
 import { runtime } from './runtime'
@@ -76,7 +77,10 @@ export function startGameTicker() {
     }
 
     if (zone.lane !== lastLane) {
-      if (zone.lane >= 0 && isLaneUnlocked(game.profile, zone.lane)) actions.enterLane(zone.lane)
+      if (zone.lane >= 0 && isLaneUnlocked(game.profile, zone.lane)) {
+        actions.enterLane(zone.lane)
+        sfx.laneEnter()
+      }
       else if (lastLane >= 0) actions.leaveLane()
       lastLane = zone.lane
     }

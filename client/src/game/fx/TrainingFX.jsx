@@ -44,6 +44,7 @@ export function TrainingFX() {
     Array.from({ length: MAX_SHOTS }, () => ({
       active: false,
       released: false,
+      lane: -1,
       t: 0,
       gain: 0,
       leveledUp: false,
@@ -93,6 +94,7 @@ export function TrainingFX() {
       }
       shot.active = true
       shot.released = false
+      shot.lane = event.lane
       shot.t = 0
       shot.gain = event.gain
       shot.leveledUp = event.leveledUp
@@ -112,6 +114,7 @@ export function TrainingFX() {
       if (!shot.released) {
         shot.released = true
         shot.from.copy(player.frisbeeAt)
+        sfx.swish()
       }
       if (flight >= 1) {
         shot.active = false
@@ -121,7 +124,9 @@ export function TrainingFX() {
           player.position.z + (Math.random() - 0.5) * 1.5,
         )
         spawnPopup(`+${formatNumber(shot.gain)} POWER`, _popupAt, { iconUrl: iconUrl('muscle') })
-        sfx.power()
+        // A lane's target takes a thwack; a click throw just lands.
+        if (shot.lane >= 0) sfx.targetHit()
+        else sfx.power()
         if (shot.leveledUp) {
           _popupAt.set(player.position.x, player.position.y + 2.6, player.position.z)
           spawnPopup('LEVEL UP!', _popupAt, { gradient: LEVEL_GRADIENT, scale: 1.5, life: 1600 })

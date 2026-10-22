@@ -1,8 +1,12 @@
+import { createMusic } from './music'
+
 /**
- * Sound effects, synthesised with WebAudio: no audio files to download.
+ * Sound effects and the background music, synthesised with WebAudio: no audio files
+ * to download.
  *
  * Browsers only allow audio after a user gesture, so the AudioContext is created on
- * the first tap/click/key and every sound before that is silently skipped.
+ * the first tap/click/key (which also starts the music) and every sound before that is
+ * silently skipped.
  */
 
 const MUTE_KEY = 'pp.muted'
@@ -10,8 +14,10 @@ const MUTE_KEY = 'pp.muted'
 let ctx = null
 let master = null
 let noiseBuffer = null
+let music = null
 let muted = readMuted()
 const lastPlayed = new Map()
+const muteListeners = new Set()
 
 function readMuted() {
   try {
@@ -36,6 +42,8 @@ function unlock() {
   noiseBuffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate)
   const data = noiseBuffer.getChannelData(0)
   for (let i = 0; i < data.length; i += 1) data[i] = Math.random() * 2 - 1
+  music = createMusic(ctx, master, noiseBuffer)
+  music.start()
 }
 
 /** Installs the first-gesture unlock. Call once at startup. */
@@ -64,6 +72,60 @@ export function setMuted(value) {
     // Not persisted; fine.
   }
   if (master) master.gain.value = muted ? 0 : 0.5
+  for (const listener of muteListeners) listener(muted)
+}
+
+/** Calls `listener(muted)` on every change; returns the unsubscribe. */
+export function onMutedChange(listener) {
+  muteListeners.add(listener)
+  return () => muteListeners.delete(listener)
+}
+
+// --- Wind: the rush of air while a frisbee flies -----------------------------------
+
+let wind = null
+let windSetAt = 0
+
+/**
+ * A looping band of filtered noise. `windSet(level)` (0..1, from the frisbee's speed)
+ * opens it up and brightens it; the music ducks under it until `windStop`.
+ */
+function windStart() {
+  if (!ctx || wind || ctx.state !== 'running') return
+  const src = ctx.createBufferSource()
+  src.buffer = noiseBuffer
+  src.loop = true
+  const filter = ctx.createBiquadFilter()
+  filter.type = 'bandpass'
+  filter.Q.value = 0.7
+  filter.frequency.value = 400
+  const gain = ctx.createGain()
+  gain.gain.value = 0.0001
+  src.connect(filter).connect(gain).connect(master)
+  src.start()
+  wind = { src, filter, gain }
+  music?.duck(true)
+}
+
+function windSet(level) {
+  if (!wind) return
+  // Ten updates a second is plenty for a smooth swell.
+  const now = performance.now()
+  if (now - windSetAt < 100) return
+  windSetAt = now
+  const t = ctx.currentTime
+  const l = Math.min(1, Math.max(0, level))
+  wind.gain.gain.setTargetAtTime(0.03 + l * 0.2, t, 0.2)
+  wind.filter.frequency.setTargetAtTime(320 + l * 2400, t, 0.25)
+}
+
+function windStop() {
+  if (!wind) return
+  const { src, gain } = wind
+  wind = null
+  gain.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.3)
+  src.stop(ctx.currentTime + 1.5)
+  music?.duck(false)
 }
 
 function ready(name, minGapMs = 0) {
@@ -154,4 +216,39 @@ export const sfx = {
     noise({ duration: 0.8, volume: 0.15, from: 200, to: 4000, q: 0.6 })
     ;[262, 330, 392, 523, 659, 784].forEach((f, i) => tone(f, { type: 'sawtooth', at: 0.1 + i * 0.07, duration: 0.25, volume: 0.06 }))
   },
+  /** A frisbee leaving the hand on a training or click throw: a short swish. */
+  swish() {
+    if (ready('swish', 90)) noise({ duration: 0.22, volume: 0.12, from: 1800, to: 500, q: 1.6 })
+  },
+  /** A training throw hitting its target: a thwack, then a bright rising ding. */
+  targetHit() {
+    if (!ready('targetHit', 100)) return
+    noise({ duration: 0.09, volume: 0.22, from: 2400, to: 700, q: 0.9 })
+    tone(330, { type: 'square', duration: 0.06, volume: 0.05, slideTo: 160 })
+    tone(988 + Math.random() * 80, { type: 'triangle', at: 0.05, duration: 0.12, volume: 0.08, slideTo: 1568 })
+  },
+  /** Stepping onto an unlocked training lane: a soft rising chime. */
+  laneEnter() {
+    if (!ready('laneEnter', 400)) return
+    ;[523, 784, 1047].forEach((f, i) => tone(f, { type: 'sine', at: i * 0.05, duration: 0.28, volume: 0.07 }))
+  },
+  /** A jump: a springy little boing. */
+  jump() {
+    if (ready('jump', 120)) tone(260, { type: 'triangle', duration: 0.18, volume: 0.1, slideTo: 620 })
+  },
+  /** Landing from a jump: a soft thump. */
+  jumpLand() {
+    if (!ready('jumpLand', 150)) return
+    tone(140, { type: 'sine', duration: 0.12, volume: 0.12, slideTo: 70 })
+    noise({ duration: 0.08, volume: 0.06, from: 900, to: 300, q: 0.7 })
+  },
+  /** The thrown frisbee coming down at the end of its flight: thud and skid. */
+  land() {
+    if (!ready('land')) return
+    tone(120, { type: 'sine', duration: 0.25, volume: 0.18, slideTo: 55 })
+    noise({ duration: 0.5, volume: 0.14, at: 0.04, from: 1400, to: 250, q: 0.6 })
+  },
+  windStart,
+  windSet,
+  windStop,
 }

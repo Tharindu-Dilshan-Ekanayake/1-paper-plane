@@ -55,7 +55,8 @@ export function beginFlight(result) {
 
   timers.push(
     setTimeout(() => {
-      sfx.wins()
+      sfx.land()
+      setTimeout(sfx.wins, 250)
       if (runtime.flightFocus) {
         const f = runtime.flightFocus
         burst({ x: f.x, y: f.y + 0.5, z: f.z - 3, count: 40, palette: 'gold', speed: 8 })

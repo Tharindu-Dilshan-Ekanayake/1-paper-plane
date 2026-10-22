@@ -369,6 +369,13 @@ export default function Flight() {
       if (plane) {
         // The one in the hand is shown until the release.
         plane.visible = elapsed >= RELEASE_DELAY
+        // The rush of air while it flies, swelling with its speed, gone as it lands.
+        if (elapsed >= RELEASE_DELAY && t < 1) {
+          sfx.windStart()
+          sfx.windSet(speed / 90)
+        } else if (t >= 1) {
+          sfx.windStop()
+        }
         plane.position.copy(_p)
         frisbeeOrientation(plane.quaternion, now * 0.022, 0.12 + climb, Math.sin(now * 0.0025) * 0.22 * (1 - t))
         plane.setFrisbee(getGame().profile.equippedPlane)
@@ -394,6 +401,7 @@ export default function Flight() {
       plane.visible = false
     }
     if (wasActive.current && !flight.active) {
+      sfx.windStop()
       skyUniforms.topColor.value.copy(DEFAULT_TOP)
       skyUniforms.horizonColor.value.copy(DEFAULT_HORIZON)
       if (scene.fog) scene.fog.color.set(FOG.color)

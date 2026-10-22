@@ -219,7 +219,30 @@ const fastForward = svg(
   ]),
 )
 
+const SPEAKER = `<path d="M14 38h16l22-18v60L30 62H14z" fill="url(#sp-g)" stroke="${OUT}" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M20 44h8" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".7"/>`
+const SPEAKER_GRADIENT = vgrad('sp-g', [
+  [0, '#ffffff'],
+  [1, '#c7d3e3'],
+])
+
+const sound = svg(
+  `${SPEAKER}
+  <path d="M62 38c6 7 6 17 0 24M72 30c11 11 11 29 0 40" fill="none" stroke="${OUT}" stroke-width="12" stroke-linecap="round"/>
+  <path d="M62 38c6 7 6 17 0 24M72 30c11 11 11 29 0 40" fill="none" stroke="#7fe2ff" stroke-width="5" stroke-linecap="round"/>`,
+  SPEAKER_GRADIENT,
+)
+
+const soundOff = svg(
+  `${SPEAKER}
+  <path d="M62 38l22 24M84 38L62 62" stroke="${OUT}" stroke-width="13" stroke-linecap="round"/>
+  <path d="M62 38l22 24M84 38L62 62" stroke="#ff5a5a" stroke-width="6" stroke-linecap="round"/>`,
+  SPEAKER_GRADIENT,
+)
+
 export const ICON_SVGS = {
+  sound,
+  soundOff,
   starGold,
   fastForward,
   trophy,

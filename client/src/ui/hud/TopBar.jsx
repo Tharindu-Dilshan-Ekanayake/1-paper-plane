@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react'
+
 import { dailyStatus } from '@shared/logic'
 
+import { isMuted, onMutedChange, setMuted } from '../../audio/sfx'
 import { useGame } from '../../store/game'
 import AuthHUD from '../AuthHUD'
 import useNow from '../useNow'
@@ -16,9 +19,16 @@ function RoundButton({ icon, label, onClick, alert, iconSize = 38 }) {
   )
 }
 
+/** Turns the music and sound effects on and off (remembered on this device). */
+function SoundButton() {
+  const [muted, setMutedState] = useState(isMuted)
+  useEffect(() => onMutedChange(setMutedState), [])
+  return <RoundButton icon={muted ? 'soundOff' : 'sound'} label={muted ? 'Sound: off' : 'Sound: on'} onClick={() => setMuted(!muted)} iconSize={36} />
+}
+
 /**
- * The top-right corner: daily rewards, leaderboards and your name tag. The top-left
- * is deliberately left clear for the game's logo.
+ * The top-right corner: sound, daily rewards, leaderboards and your name tag. The
+ * top-left is deliberately left clear for the game's logo.
  */
 export function TopBar() {
   const openPanel = useGame((s) => s.openPanel)
@@ -29,6 +39,7 @@ export function TopBar() {
 
   return (
     <div className="pointer-events-none absolute flex items-center" style={{ right: u(16), top: u(14), gap: u(12) }}>
+      <SoundButton />
       <RoundButton icon="calendar" label="Daily Rewards" alert={dailyReady} onClick={() => openPanel('daily')} />
       <RoundButton icon="star" label="Leaderboards" onClick={() => openPanel('leaderboards')} iconSize={34} />
       <AuthHUD />
