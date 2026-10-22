@@ -47,7 +47,6 @@ function buildRig() {
 }
 
 function render(id) {
-  rig ||= buildRig()
   rig.mesh.geometry = petGeometry(id)
   const previousTarget = renderer.getRenderTarget()
   const previousClear = renderer.getClearColor(_previousClear)
@@ -86,11 +85,13 @@ function render(id) {
 /** Called once the renderer exists (from inside the Canvas). */
 export function attachIconRenderer(gl) {
   renderer = gl
+  // Built here, at set-up, so the frame loop that renders portraits never allocates.
+  rig ||= buildRig()
 }
 
 /** Renders up to `max` queued portraits. Runs in the frame loop; no React state. */
 export function processIconQueue(max = 2) {
-  if (!renderer || queue.length === 0) return
+  if (!renderer || !rig || queue.length === 0) return
   for (let i = 0; i < max && queue.length; i += 1) render(queue.shift())
   // Re-render the portraits' React components after the frame, not inside it.
   if (notifyScheduled) return
@@ -115,10 +116,4 @@ function subscribe(fn) {
 export function usePetIcon(id) {
   request(id)
   return useSyncExternalStore(subscribe, () => urls.get(id) ?? null)
-}
-
-/** Drops cached portraits (the GL context they came from was lost). */
-export function resetPetIcons() {
-  rig?.target.dispose()
-  rig = null
 }
