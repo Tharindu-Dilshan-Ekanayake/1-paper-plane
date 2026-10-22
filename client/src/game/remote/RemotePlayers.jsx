@@ -104,7 +104,8 @@ export function RemotePlayers() {
   const ghostGlowRef = useRef(null)
 
   const assets = useMemo(() => {
-    const body = new InstancedMesh(new BoxGeometry(1, 1, 1), new MeshLambertMaterial(), MAX_REMOTES * PARTS)
+    // Same material settings as the other instanced planes/pads: one shared program.
+    const body = new InstancedMesh(new BoxGeometry(1, 1, 1), new MeshLambertMaterial({ side: DoubleSide, flatShading: true }), MAX_REMOTES * PARTS)
     body.setColorAt(0, _color.set('#ffffff'))
     body.count = 0
     body.frustumCulled = false

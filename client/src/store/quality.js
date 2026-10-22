@@ -54,7 +54,7 @@ export const PRESETS = {
     dpr: 1.5,
     antialias: true,
     shadows: 'realtime',
-    shadowMapSize: 2048,
+    shadowMapSize: 1024,
     particles: true,
     speedLines: true,
     viewDistance: 460,

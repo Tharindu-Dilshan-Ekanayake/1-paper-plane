@@ -1,7 +1,7 @@
-import { useGLTF } from '@react-three/drei'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useLoader } from '@react-three/fiber'
 import { forwardRef, useEffect, useMemo, useRef, useState } from 'react'
-import { Box3, MeshStandardMaterial, Vector3 } from 'three'
+import { Box3, MeshLambertMaterial, Vector3 } from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { clone as cloneSkeleton } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
 import {
@@ -57,7 +57,9 @@ export const PlayerAvatar = forwardRef(function PlayerAvatar(
   ref,
 ) {
   const { avatar: equipped, proportions, game } = useBloxity()
-  const { scene: baseScene } = useGLTF(BASE_BODY_URL)
+  // three's own GLTFLoader (the one the cosmetics use too), not drei's useGLTF, which
+  // would bundle a second loader plus Draco/Meshopt/KTX2 decoders this GLB never needs.
+  const { scene: baseScene } = useLoader(GLTFLoader, BASE_BODY_URL)
   const [assembled, setAssembled] = useState(false)
 
   // The GLTF cache hands back one shared scene. Clone via SkeletonUtils so this
@@ -71,11 +73,9 @@ export const PlayerAvatar = forwardRef(function PlayerAvatar(
     // The base body ships with an empty texture; give every skinned mesh its own
     // material instance so a skin swap here can't leak into another avatar.
     for (const mesh of collected.skinnedMeshes) {
-      mesh.material = new MeshStandardMaterial({
-        color: 0xffffff,
-        metalness: 0,
-        roughness: 1,
-      })
+      // Lambert: these settings made Standard look matte anyway, and Lambert is far
+      // cheaper to compile and to shade.
+      mesh.material = new MeshLambertMaterial({ color: 0xffffff })
     }
 
     if (!collected.skeleton) {
@@ -162,7 +162,7 @@ export const PlayerAvatar = forwardRef(function PlayerAvatar(
               if (result.texture) {
                 result.object.traverse((child) => {
                   if (child.isMesh) {
-                    child.material = new MeshStandardMaterial({ map: result.texture })
+                    child.material = new MeshLambertMaterial({ map: result.texture })
                   }
                 })
               }
@@ -224,6 +224,6 @@ export const PlayerAvatar = forwardRef(function PlayerAvatar(
   )
 })
 
-useGLTF.preload(BASE_BODY_URL)
+useLoader.preload(GLTFLoader, BASE_BODY_URL)
 
 export default PlayerAvatar

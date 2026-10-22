@@ -1,5 +1,5 @@
 import { useFrame, useThree } from '@react-three/fiber'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 
 /**
  * Publishes renderer stats on `window.__ppPerf` once a second: draw calls, triangles,
@@ -11,7 +11,13 @@ import { useRef } from 'react'
  */
 export function PerfProbe() {
   const gl = useThree((s) => s.gl)
+  const scene = useThree((s) => s.scene)
   const acc = useRef({ frames: 0, since: 0, maxCalls: 0, maxTriangles: 0 })
+
+  // With ?debug, the scene too, for the automated texture-memory audit.
+  useEffect(() => {
+    if (window.__pp) window.__ppScene = scene
+  }, [scene])
 
   useFrame(() => {
     const info = gl.info

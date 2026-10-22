@@ -47,9 +47,12 @@ function isResetSentinel(equipped) {
 const PORTAL_URL = import.meta.env.VITE_BLOXITY_PORTAL_URL || 'https://bloxity.io'
 const API_URL = import.meta.env.VITE_BLOXITY_API_URL || 'https://api.bloxity.io'
 
-function initOnce(gameSlug, signal) {
+function initOnce(gameSlug) {
   if (!initPromise) {
-    initPromise = waitForSDK({ signal }).then((sdk) => {
+    // No abort signal: this promise is shared by every mount (StrictMode mounts twice in
+    // dev), so one mount's cleanup must not cancel it for the next. Each caller ignores
+    // a late result through its own `cancelled` flag instead.
+    initPromise = waitForSDK().then((sdk) => {
       sdk.init({ gameSlug, apiUrl: API_URL, portalUrl: PORTAL_URL })
       return sdk
     })
@@ -90,14 +93,13 @@ export function BloxityProvider({ gameSlug, children }) {
       )
     }
 
-    const controller = new AbortController()
     const store = useBloxityStore.getState()
     const unsubscribers = []
     let cancelled = false
 
     store.setStatus('loading')
 
-    initOnce(slug, controller.signal)
+    initOnce(slug)
       .then((sdk) => {
         if (cancelled) return
         sdkRef.current = sdk
@@ -174,7 +176,6 @@ export function BloxityProvider({ gameSlug, children }) {
 
     return () => {
       cancelled = true
-      controller.abort()
       unsubscribers.forEach((fn) => safeCall(fn))
     }
   }, [slug])

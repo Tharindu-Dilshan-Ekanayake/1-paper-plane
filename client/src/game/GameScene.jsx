@@ -19,6 +19,7 @@ import TutorialArrows from './world/TutorialArrows'
 import Lighting from './Lighting'
 import PerfProbe from './PerfProbe'
 import Player from './Player'
+import ShaderWarmup from './ShaderWarmup'
 import { FOG, SKY } from './sceneStyle'
 import Sky from './Sky'
 import World from './world/World'
@@ -73,31 +74,37 @@ export function GameScene({ onReady }) {
   const antialias = useQuality((s) => s.antialias)
   const degrade = useQuality((s) => s.degrade)
 
-  const [avatarReady, setAvatarReady] = useState(false)
+  const [warmedUp, setWarmedUp] = useState(false)
   const [firstFrame, setFirstFrame] = useState(false)
   const [contextKey, setContextKey] = useState(0)
   const [contextLost, setContextLost] = useState(false)
   const readySent = useRef(false)
 
-  const handleAvatarReady = useCallback(() => setAvatarReady(true), [])
+  const handleWarmedUp = useCallback(() => setWarmedUp(true), [])
   const handleFirstFrame = useCallback(() => setFirstFrame(true), [])
 
   useEffect(() => {
     game.loadingStep('Preparing scene…')
   }, [game])
 
+  // Playable once every shader is compiled and the first real frame is drawn. The
+  // player's own avatar streams in afterwards (a blocky stand-in shows meanwhile), so a
+  // slow avatar CDN never holds the game up.
   useEffect(() => {
-    if (!avatarReady || !firstFrame || readySent.current) return
+    if (!warmedUp || !firstFrame || readySent.current) return
     readySent.current = true
     game.loadingEnd()
     onReady?.()
-  }, [avatarReady, firstFrame, game, onReady])
+  }, [warmedUp, firstFrame, game, onReady])
 
   // A lost context (GPU reset, too many tabs, backgrounded on mobile) is recovered by
   // remounting the canvas, which builds a fresh context and re-uploads everything.
   // Game state lives in stores, so nothing is lost but a moment of rendering.
   const handleCreated = useCallback(({ gl }) => {
     gl.setClearColor(SKY.horizon)
+    // Checking every program's compile status forces the driver to finish it on the
+    // spot. Worth it while developing; in production it only costs start-up time.
+    gl.debug.checkShaderErrors = import.meta.env.DEV
     const canvas = gl.domElement
     let remountTimer = null
     const remount = () => {
@@ -150,17 +157,18 @@ export function GameScene({ onReady }) {
         <RewardCrab />
         <Pets />
         <RemotePlayers />
-        <Player onAvatarReady={handleAvatarReady} />
+        <Player />
         <BlobShadows />
         <TrainingFX />
-        {avatarReady && firstFrame && (
+        {warmedUp && firstFrame && (
           <Suspense fallback={null}>
             <Flight />
           </Suspense>
         )}
 
         <FollowCamera />
-        <FirstFrameSignal onFirstFrame={handleFirstFrame} />
+        <ShaderWarmup onDone={handleWarmedUp} />
+        {warmedUp && <FirstFrameSignal onFirstFrame={handleFirstFrame} />}
         <PerfProbe />
         {showDevPerf && DevPerf && (
           <ErrorBoundary>

@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
-import { BoxGeometry, Color, Euler, InstancedMesh, Matrix4, MeshBasicMaterial, Quaternion, Vector3 } from 'three'
+import { BoxGeometry, Color, DoubleSide, Euler, InstancedMesh, Matrix4, MeshBasicMaterial, Quaternion, Vector3 } from 'three'
 
 import { useQuality } from '../../store/quality'
 import { drainBursts } from './fxQueue'
@@ -40,7 +40,7 @@ export function Particles() {
   const next = useRef(0)
 
   const mesh = useMemo(() => {
-    const m = new InstancedMesh(new BoxGeometry(0.22, 0.22, 0.06), new MeshBasicMaterial({ toneMapped: false }), POOL)
+    const m = new InstancedMesh(new BoxGeometry(0.22, 0.22, 0.06), new MeshBasicMaterial({ side: DoubleSide }), POOL)
     m.setColorAt(0, PALETTES.confetti[0])
     m.frustumCulled = false
     m.count = POOL

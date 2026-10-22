@@ -57,6 +57,7 @@ export function World() {
   }, [])
 
   const { blocks, ground, props } = useMemo(() => {
+    performance.mark('pp:world-start')
     const { decorDensity, maxTexture } = useQuality.getState().settings
     const set = new BlockSet()
     buildTerrain(set, { treeDensity: decorDensity })
@@ -73,6 +74,7 @@ export function World() {
     const map = createGroundMap(maxTexture)
     const groundMaterial = createToyMaterial({ instanced: false, vertexColors: false, map, studScale: 2 })
 
+    performance.mark('pp:world-end')
     return {
       blocks: set.build(sharedMaterials().blocks),
       props: propBuilder.build(),

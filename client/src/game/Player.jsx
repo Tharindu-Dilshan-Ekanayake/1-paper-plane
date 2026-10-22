@@ -235,7 +235,7 @@ export function Player({ onAvatarReady }) {
       <group ref={visualRef}>
         <HeldPlane />
         <ErrorBoundary fallback={<FallbackAvatar motionRef={motionRef} onReady={onAvatarReady} />}>
-          <Suspense fallback={null}>
+          <Suspense fallback={<FallbackAvatar motionRef={motionRef} />}>
             <PlayerAvatar onReady={onAvatarReady} targetHeight={PLAYER_HEIGHT} motionRef={motionRef} />
           </Suspense>
         </ErrorBoundary>

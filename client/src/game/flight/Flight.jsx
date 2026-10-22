@@ -27,7 +27,7 @@ import { sfx } from '../../audio/sfx'
 import { getGame } from '../../store/game'
 import { getQuality, useQuality } from '../../store/quality'
 import { iconUrl } from '../../ui/icons'
-import { disposeBlocks, PropBuilder } from '../blocks'
+import { BlockSet, disposeBlocks, PropBuilder } from '../blocks'
 import { spawnPopup } from '../fx/popups'
 import { createPlaneModel } from '../planeModel'
 import { LabelBatch } from '../labels/LabelBatch'
@@ -38,6 +38,33 @@ import { skyUniforms } from '../skyState'
 import { flight } from './flightControl'
 import { writeDistance } from './hudLink'
 import { buildChunk, CHUNK, GATES, ZONE_THEMES, zAt } from './track'
+
+/**
+ * Above this speed (m/s) the flight goes to "warp": no new scenery is built, a plain
+ * zone-coloured floor rushes past under the speed lines, and only the chunks around the
+ * landing point are prepared. Streaming real chunks at thousands of m/s would cost
+ * more CPU than a phone has, for scenery nobody could see.
+ */
+const WARP_ON = 220
+const WARP_OFF = 160
+/** Length of the warp floor, centred a little ahead of the plane. */
+const WARP_LENGTH = 1400
+/** Builder passes between prefetch builds while in warp (~1 chunk per 120 ms). */
+const PREFETCH_EVERY = 4
+
+/** Warp-floor colours and styles per zone, parsed once. */
+const WARP_THEMES = ZONES.map((z) => {
+  const t = ZONE_THEMES[z.id]
+  return {
+    ground: t.ground ? new Color(t.ground) : null,
+    road: new Color(t.road),
+    kerb: new Color(t.kerb),
+    roadStyle: t.roadStyle,
+    kerbStyle: t.kerbStyle ?? STYLE.STUDS,
+    roadHalf: t.roadHalf,
+    kerbHalf: t.kerbHalf,
+  }
+})
 
 /** Chunks kept behind the focus point, and how many may be built per builder pass. */
 const BEHIND = 60
@@ -68,7 +95,7 @@ const _skyHorizon = new Color()
 /** Built chunks by index. Module-level: one track exists at a time. */
 const chunkCache = new Map()
 /** The chunk window the frame loop wants; the builder makes it so. */
-const trackWindow = { first: 0, last: 0, density: 1, shadows: false }
+const trackWindow = { first: 0, last: 0, density: 1, shadows: false, warp: false, prefetchFirst: 0, prefetchLast: -1 }
 
 /** Speed-line streaks, made once. */
 const streakState = (() => {
@@ -97,6 +124,40 @@ function createTrophyGeometry() {
   return p.build()
 }
 
+let warpZone = -1
+
+/** Moves the warp floor under the plane and restyles it when the zone changes. */
+function updateWarpFloor(floor, meter) {
+  const zi = zoneIndexAt(meter)
+  const theme = WARP_THEMES[zi]
+  const centerZ = zAt(meter + WARP_LENGTH * 0.35)
+  const parts = [
+    // [width, height, top, colour, style]
+    [theme.ground ? 340 : 0, 1, -0.06, theme.ground, STYLE.STUDS],
+    [theme.roadHalf * 2, 0.25, 0.0, theme.road, theme.roadStyle],
+    [theme.kerbHalf - theme.roadHalf, 0.3, 0.08, theme.kerb, theme.kerbStyle],
+    [theme.kerbHalf - theme.roadHalf, 0.3, 0.08, theme.kerb, theme.kerbStyle],
+  ]
+  const kerbX = (theme.roadHalf + theme.kerbHalf) / 2
+  parts.forEach(([w, h, top, color, style], i) => {
+    const x = i === 2 ? -kerbX : i === 3 ? kerbX : 0
+    _p.set(x, top - h / 2, centerZ)
+    _s.set(Math.max(w, 0.0001), h, WARP_LENGTH)
+    _q.identity()
+    floor.setMatrixAt(i, _m.compose(_p, _q, _s))
+    if (zi !== warpZone && color) floor.setColorAt(i, color)
+    if (zi !== warpZone) floor.geometry.getAttribute('aStyle').array[i] = style
+  })
+  floor.instanceMatrix.needsUpdate = true
+  if (zi !== warpZone) {
+    warpZone = zi
+    if (floor.instanceColor) floor.instanceColor.needsUpdate = true
+    floor.geometry.getAttribute('aStyle').needsUpdate = true
+  }
+  // Instance bounds changed; keep the whole floor in view.
+  floor.frustumCulled = false
+}
+
 /** Where the plane is at normalised time `t` (0-1) of the current flight. */
 function planePosition(t, start, out) {
   const end = zAt(flight.distance)
@@ -119,7 +180,10 @@ function planePosition(t, start, out) {
 export default function Flight() {
   const camera = useThree((s) => s.camera)
   const scene = useThree((s) => s.scene)
+  const gl = useThree((s) => s.gl)
+  const rootRef = useRef(null)
   const groupRef = useRef(null)
+  const warpRef = useRef(null)
   const planeRef = useRef(null)
   const trophyRef = useRef(null)
   const streakRef = useRef(null)
@@ -166,8 +230,35 @@ export default function Flight() {
     stars.frustumCulled = false
     stars.visible = false
 
-    return { trophies, trophyMaterial, planeModel, streakMesh, streakMaterial, stars }
+    // Warp floor: ground, road and two kerbs, sitting a hair below real chunks so any
+    // built chunk shows through on top of it.
+    const warpSet = new BlockSet()
+    for (let i = 0; i < 4; i += 1) warpSet.add(0, -0.5, 0, 1, 1, 1, '#ffffff', STYLE.STUDS)
+    const warpFloor = warpSet.build(sharedMaterials().blocks)
+    warpFloor.visible = false
+    warpFloor.matrixAutoUpdate = false
+
+    return { trophies, trophyMaterial, planeModel, streakMesh, streakMaterial, stars, warpFloor }
   }, [])
+
+  // This module loads after the lobby is on screen; compile its shaders in the
+  // background before showing it, so the first throw doesn't stall on them.
+  useEffect(() => {
+    const root = rootRef.current
+    // Skipped in dev, where StrictMode's remount disposes materials mid-compile (see
+    // ShaderWarmup).
+    if (!root || import.meta.env.DEV) return undefined
+    let cancelled = false
+    root.visible = false
+    gl.compileAsync(root, camera, scene)
+      .catch(() => null)
+      .finally(() => {
+        if (!cancelled) root.visible = true
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [gl, camera, scene])
 
   // Zone names over the gate arches: their own small label batch.
   useEffect(() => {
@@ -189,22 +280,38 @@ export default function Flight() {
   // Streams track chunks in and out between frames: at most two builds per pass.
   useEffect(() => {
     const group = groupRef.current
+    let pass = 0
+    const build = (i, density) => {
+      const mesh = buildChunk(i, { density }).build(sharedMaterials().blocks)
+      mesh.receiveShadow = trackWindow.shadows
+      chunkCache.set(i, mesh)
+      group.add(mesh)
+    }
     const id = setInterval(() => {
       if (!group) return
       const want = trackWindow
-      let built = 0
-      for (let i = want.first; i <= want.last && built < MAX_BUILDS_PER_FRAME; i += 1) {
-        if (chunkCache.has(i)) continue
-        const mesh = buildChunk(i, { density: want.density }).build(sharedMaterials().blocks)
-        mesh.receiveShadow = want.shadows
-        mesh.visible = true
-        chunkCache.set(i, mesh)
-        group.add(mesh)
-        built += 1
+      pass += 1
+      if (want.warp) {
+        // Only get the landing site ready, one chunk at a time.
+        if (pass % PREFETCH_EVERY === 0) {
+          for (let i = want.prefetchFirst; i <= want.prefetchLast; i += 1) {
+            if (chunkCache.has(i)) continue
+            build(i, want.density)
+            break
+          }
+        }
+      } else {
+        let built = 0
+        for (let i = want.first; i <= want.last && built < MAX_BUILDS_PER_FRAME; i += 1) {
+          if (chunkCache.has(i)) continue
+          build(i, want.density)
+          built += 1
+        }
       }
       if (chunkCache.size <= CACHE_LIMIT) return
       for (const [i, mesh] of chunkCache) {
-        if ((i < want.first || i > want.last) && i >= PINNED_CHUNKS) {
+        const wanted = (i >= want.first && i <= want.last) || (i >= want.prefetchFirst && i <= want.prefetchLast)
+        if (!wanted && i >= PINNED_CHUNKS) {
           group.remove(mesh)
           disposeBlocks(mesh)
           chunkCache.delete(i)
@@ -224,6 +331,7 @@ export default function Flight() {
       assets.streakMesh.dispose()
       assets.stars.geometry.dispose()
       assets.stars.material.dispose()
+      disposeBlocks(assets.warpFloor)
       skyUniforms.topColor.value.copy(DEFAULT_TOP)
       skyUniforms.horizonColor.value.copy(DEFAULT_HORIZON)
     }
@@ -302,6 +410,22 @@ export default function Flight() {
     want.density = settings.decorDensity * (speed > 300 ? 0.35 : speed > 120 ? 0.65 : 1)
     want.shadows = settings.shadows === 'realtime'
     for (const [i, mesh] of chunkCache) mesh.visible = i >= want.first && i <= want.last
+
+    if (!flight.active) want.warp = false
+    else if (!want.warp && speed > WARP_ON) want.warp = true
+    else if (want.warp && speed < WARP_OFF) want.warp = false
+    if (flight.active) {
+      // The landing site, built ahead of time while warping towards it.
+      want.prefetchFirst = Math.max(0, Math.floor((flight.distance - 150) / CHUNK))
+      want.prefetchLast = Math.floor((flight.distance + Math.min(ahead, 240)) / CHUNK)
+    } else {
+      want.prefetchLast = -1
+    }
+    const floor = warpRef.current
+    if (floor) {
+      floor.visible = want.warp
+      if (want.warp) updateWarpFloor(floor, focus)
+    }
 
     // --- Trophies -----------------------------------------------------------------
     if (flight.active) {
@@ -382,10 +506,11 @@ export default function Flight() {
   })
 
   return (
-    <group>
+    <group ref={rootRef}>
       <group ref={groupRef} />
       <group ref={gatesRef} />
       <primitive ref={planeRef} object={assets.planeModel} />
+      <primitive ref={warpRef} object={assets.warpFloor} />
       <primitive ref={trophyRef} object={assets.trophies} />
       <primitive ref={streakRef} object={assets.streakMesh} />
       <primitive ref={starsRef} object={assets.stars} />
