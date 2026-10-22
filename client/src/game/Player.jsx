@@ -1,11 +1,14 @@
 import { useFrame } from '@react-three/fiber'
-import { Suspense, useEffect, useRef } from 'react'
-import { Quaternion, Vector3 } from 'three'
+import { Suspense, useEffect, useMemo, useRef } from 'react'
+import { DoubleSide, MeshLambertMaterial, Quaternion, Vector3 } from 'three'
 
 import { clampToWalkable, groundHeightAt, STATIC_COLLIDERS } from '@shared/world'
 
+import { getGame } from '../store/game'
 import ErrorBoundary from '../ui/ErrorBoundary'
 import FallbackAvatar from './FallbackAvatar'
+import { PAPER_PLANE } from './geometry'
+import { planeColor } from './planes'
 import PlayerAvatar from './PlayerAvatar'
 import { runtime } from './runtime'
 import useKeyboard from './useKeyboard'
@@ -29,6 +32,44 @@ const _camRight = new Vector3()
 const _targetQuat = new Quaternion()
 const _up = new Vector3(0, 1, 0)
 const _clamped = { x: 0, z: 0 }
+
+/**
+ * The equipped plane in the right hand. Hidden for the moment it's been thrown, so the
+ * flying copy reads as the same plane.
+ */
+function HeldPlane() {
+  const ref = useRef(null)
+  const material = useMemo(() => new MeshLambertMaterial({ side: DoubleSide, flatShading: true }), [])
+  const shown = useRef(null)
+
+  useEffect(() => () => material.dispose(), [material])
+
+  useFrame(() => {
+    const mesh = ref.current
+    if (!mesh) return
+    const id = getGame().profile.equippedPlane
+    if (shown.current !== id) {
+      shown.current = id
+      mesh.material.color.copy(planeColor(id))
+    }
+    // Released after the wind-up, back in hand once the swing finishes.
+    const t = runtime.player.throwTimer
+    mesh.visible = !(t > 0 && t < 0.24)
+  })
+
+  // The character faces +Z locally, so its right hand is on -X.
+  return (
+    <mesh
+      ref={ref}
+      geometry={PAPER_PLANE}
+      material={material}
+      position={[-0.52, 0.95, 0.28]}
+      rotation={[-0.25, 0.1, 0]}
+      scale={0.62}
+      castShadow
+    />
+  )
+}
 
 /** Pushes a circle out of an axis-aligned rect. Returns true on contact. */
 function pushOut(pos, rect) {
@@ -202,6 +243,7 @@ export function Player({ onAvatarReady }) {
   return (
     <group ref={groupRef}>
       <group ref={visualRef}>
+        <HeldPlane />
         <ErrorBoundary fallback={<FallbackAvatar motionRef={motionRef} onReady={onAvatarReady} />}>
           <Suspense fallback={null}>
             <PlayerAvatar onReady={onAvatarReady} targetHeight={PLAYER_HEIGHT} motionRef={motionRef} />

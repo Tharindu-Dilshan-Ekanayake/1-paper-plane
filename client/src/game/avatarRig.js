@@ -340,7 +340,28 @@ const sway = (rig, name, angle) => rotateBone(rig, name, 'axisZ', angle)
  */
 export function animateRig(rig, motion) {
   if (!rig?.skeleton || !motion) return
+  basePose(rig, motion)
+  if (motion.throwT > 0) throwPose(rig, motion.throwT)
+}
 
+/** Seconds a throw swing lasts; matches THROW_ANIM in TrainingFX. */
+const THROW_DURATION = 0.35
+
+/**
+ * Overhand throw layered on the right arm: wind up over the head, then snap forward.
+ * `throwT` counts down from THROW_DURATION.
+ */
+function throwPose(rig, throwT) {
+  const t = 1 - Math.min(1, throwT / THROW_DURATION)
+  const windUp = 0.3
+  const angle =
+    t < windUp ? -2.9 * (t / windUp) : -2.9 + ((t - windUp) / (1 - windUp)) * 1.9
+  swing(rig, 'ArmR1', angle)
+  swing(rig, 'ArmR2', t < windUp ? -0.5 : -0.1)
+  swing(rig, 'Spine1', t < windUp ? 0.08 : -0.12)
+}
+
+function basePose(rig, motion) {
   const { time = 0, speed = 0, grounded = true, maxSpeed = 6 } = motion
   const ratio = Math.min(speed / Math.max(maxSpeed, 0.001), 1)
 

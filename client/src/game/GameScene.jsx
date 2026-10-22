@@ -7,6 +7,8 @@ import { useQuality } from '../store/quality'
 import ErrorBoundary from '../ui/ErrorBoundary'
 import BlobShadows from './BlobShadows'
 import FollowCamera from './FollowCamera'
+import TrainingFX from './fx/TrainingFX'
+import WorldLabels from './labels/WorldLabels'
 import Lighting from './Lighting'
 import PerfProbe from './PerfProbe'
 import Player from './Player'
@@ -127,8 +129,10 @@ export function GameScene({ onReady }) {
         <Sky />
         <Lighting />
         <World />
+        <WorldLabels />
         <Player onAvatarReady={handleAvatarReady} />
         <BlobShadows />
+        <TrainingFX />
 
         <FollowCamera />
         <FirstFrameSignal onFirstFrame={handleFirstFrame} />
