@@ -9,7 +9,6 @@ const BLUE = '#2f7fe6'
 const NAVY = '#1f3c96'
 const SKY = '#7fe2ff'
 const GOLD = '#ffd21f'
-const BUNTING = ['#ff3b5c', '#ffd21f', '#2fc6ff', '#4ef05a', '#b15cff']
 
 const DISC = new CylinderGeometry(1, 1, 1, 32)
 
@@ -23,13 +22,13 @@ const RIM = new TorusGeometry(1, 0.11, 8, 40)
 
 /**
  * The throw stage: a raised white-and-blue platform at the north end of the lobby with
- * steps up its south side, the painted throw pad, light strips, flags, and a launch
+ * steps up its south side, the painted throw pad, light strips, spotlights, and a launch
  * arch over its front edge that the frisbees fly out through, crowned by a giant
  * frisbee. A railing along the front marks the end of the lobby.
  *
  * Boxes go into the world's block set and the round parts into its props, so the whole
  * stage still rides in those two draw calls. `detail` (off on LOW) adds the small
- * trimmings: bulbs, checker bands and bunting.
+ * trimmings: bulbs and checker bands.
  *
  * No two faces here share a plane: every layer stands a clear step proud of what it
  * sits on (flush faces flicker, worst on phones' coarser depth buffers).
@@ -141,28 +140,14 @@ export function buildStage(blocks, props, { detail = true } = {}) {
   props.add(DISC, { position: [0, discY, archZ], rotation: lean, scale: [0.75, 0.74, 0.75], color: GOLD, style: STYLE.GLOW })
   props.add(RIM, { position: [0, discY, archZ], rotation: [lean[0] - Math.PI / 2, 0, 0], scale: [2.75, 2.75, 2.6], color: GOLD, style: STYLE.GLOW })
 
-  // Flags on the back corners, each topped with a spotlight aimed at the arch.
-  const flags = ['#ff3b5c', '#2fc6ff']
+  // Light poles on the back corners, each topped with a spotlight aimed at the arch.
   const poleTop = height + 6.5
-  ;[-1, 1].forEach((side, i) => {
+  for (const side of [-1, 1]) {
     const x = side * (width / 2 - 0.6)
     const z = maxZ - 0.6
     blocks.addOn(x, height, z, 0.22, 6.5, 0.22, WHITE)
-    blocks.addOn(x - side * 1.1, height + 5.3, z, 2, 1.2, 0.12, flags[i], STYLE.SMOOTH)
     blocks.addOn(x, poleTop, z, 0.5, 0.3, 0.5, NAVY)
     props.add(LAMP, { position: [x, poleTop + 0.65, z - 0.1], rotation: [-1.2, 0, 0], scale: [0.36, 0.8, 0.36], color: '#30363f' })
     props.add(DISC, { position: [x, poleTop + 0.83, z - 0.5], rotation: [-1.2, 0, 0], scale: [0.27, 0.06, 0.27], color: '#fff7c2', style: STYLE.GLOW })
-  })
-
-  // Bunting strung between the two flagpoles, sagging in the middle.
-  if (detail) {
-    const span = width - 1.2
-    const count = 22
-    for (let i = 0; i < count; i += 1) {
-      const t = (i + 0.5) / count
-      const x = -span / 2 + t * span
-      const y = height + 6.2 - Math.sin(t * Math.PI) * 1.4
-      props.box(x, y, maxZ - 0.6, 0.42, 0.42, 0.05, BUNTING[i % BUNTING.length], STYLE.SMOOTH, [0, 0, Math.PI / 4])
-    }
   }
 }
