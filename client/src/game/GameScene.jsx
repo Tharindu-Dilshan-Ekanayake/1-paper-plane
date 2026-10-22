@@ -7,6 +7,7 @@ import { useBloxity } from '../bloxity/BloxityContext'
 import { useQuality } from '../store/quality'
 import ErrorBoundary from '../ui/ErrorBoundary'
 import BlobShadows from './BlobShadows'
+import ClickThrow from './ClickThrow'
 import FollowCamera from './FollowCamera'
 import TrainingFX from './fx/TrainingFX'
 import WorldLabels from './labels/WorldLabels'
@@ -191,6 +192,7 @@ export function GameScene({ onReady }) {
         )}
 
         <FollowCamera />
+        <ClickThrow />
         <ShaderWarmup onDone={handleWarmedUp} />
         {warmedUp && <FirstFrameSignal onFirstFrame={handleFirstFrame} />}
         <PerfProbe />

@@ -10,7 +10,7 @@ import { getQuality } from '../../store/quality'
 import { iconUrl } from '../../ui/icons'
 import { createFrisbeeMesh, disposeFrisbeeMesh, frisbeeGlow, frisbeeOrientation } from '../frisbee'
 import { createGlowInstances, disposeGlow } from '../glow'
-import { RELEASE_DELAY, THROW_TIME } from '../playerPose'
+import { RELEASE_AT, RELEASE_DELAY, THROW_TIME } from '../playerPose'
 import { runtime } from '../runtime'
 import { targetPoint } from '../world/targets'
 import { drainTrainFx } from './fxQueue'
@@ -18,6 +18,8 @@ import { spawnPopup, updatePopups } from './popups'
 
 const MAX_SHOTS = 8
 const FLIGHT_TIME = 0.42
+/** How far ahead a click throw lands. */
+const CLICK_RANGE = 9
 const ARC_HEIGHT = 0.9
 
 const _m = new Matrix4()
@@ -70,11 +72,22 @@ export function TrainingFX() {
     const player = runtime.player
 
     drainTrainFx((event) => {
-      player.throwTimer = THROW_TIME
+      // A new swing once the last one has let go; quick clicks before that ride along
+      // on the swing already under way.
+      if (player.throwTimer <= THROW_TIME * (1 - RELEASE_AT)) player.throwTimer = THROW_TIME
       const shot = shots.current.find((s) => !s.active) || shots.current[0]
-      shot.to.fromArray(targetPoint(event.lane))
-      // Face the target while training, unless walking somewhere.
-      if (player.speed < 0.5) player.yaw = Math.atan2(shot.to.x - player.position.x, shot.to.z - player.position.z)
+      if (event.lane >= 0) {
+        shot.to.fromArray(targetPoint(event.lane))
+        // Face the target while training, unless walking somewhere.
+        if (player.speed < 0.5) player.yaw = Math.atan2(shot.to.x - player.position.x, shot.to.z - player.position.z)
+      } else {
+        // A click throw lands on the ground ahead, wherever you're facing.
+        shot.to.set(
+          player.position.x + Math.sin(player.yaw) * CLICK_RANGE,
+          player.position.y + 0.4,
+          player.position.z + Math.cos(player.yaw) * CLICK_RANGE,
+        )
+      }
       shot.active = true
       shot.released = false
       shot.t = 0

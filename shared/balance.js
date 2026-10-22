@@ -10,6 +10,12 @@
 
 /** Seconds between auto-throws while standing in a lane. */
 export const TRAIN_INTERVAL = 0.6
+/**
+ * Click throws: anywhere in the lobby outside the throw area, each click throws the
+ * frisbee from your hand for a x1 training throw. This is the fastest they count, in
+ * seconds (about six a second).
+ */
+export const CLICK_INTERVAL = 0.16
 /** Training throws per level. */
 export const LEVEL_STEPS = 10
 /** Each level adds this fraction to the frisbee's base power: gain x (1 + level x k). */

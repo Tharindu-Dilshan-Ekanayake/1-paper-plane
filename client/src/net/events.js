@@ -35,7 +35,8 @@ export function handleServerEvent(type, payload) {
         power: payload.power,
         level: payload.level,
         levelProgress: payload.levelProgress,
-        lastLane: payload.lane,
+        // Click throws (lane -1) don't count as training in a lane.
+        ...(payload.lane >= 0 ? { lastLane: payload.lane } : {}),
       })
       queueTrainFx(payload)
       if (payload.leveledUp) {

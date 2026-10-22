@@ -18,6 +18,8 @@ export function send(type, payload) {
 
 export const actions = {
   throwPlane: () => send('throw'),
+  /** A click throw anywhere outside the throw area (see ClickThrow). */
+  click: () => send('click'),
   enterLane: (lane) => send('enterLane', { lane }),
   leaveLane: () => send('leaveLane'),
   rebirth: () => send('rebirth'),

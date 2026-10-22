@@ -141,20 +141,28 @@ export function hudMultiplier(profile, laneIndex, now) {
   return area * rebirthMultiplier(profile.rebirths) * powerBoostMultiplier(profile, now)
 }
 
-/** Power gained by one training throw in `laneIndex`. */
-export function trainGain(profile, laneIndex, now) {
-  const lane = LANES[laneIndex]
-  if (!lane) return 0
+/** Power from one training throw in an area worth `areaMult`. */
+function throwGain(profile, now, areaMult) {
   const plane = planeById(profile.equippedPlane)
   const raw =
     plane.power *
     (1 + profile.level * LEVEL_GAIN) *
-    lane.mult *
+    areaMult *
     rebirthMultiplier(profile.rebirths) *
     petMultiplier(profile) *
     powerBoostMultiplier(profile, now)
   return Math.max(1, Math.round(raw))
 }
+
+/** Power gained by one training throw in `laneIndex`. */
+export function trainGain(profile, laneIndex, now) {
+  const lane = LANES[laneIndex]
+  if (!lane) return 0
+  return throwGain(profile, now, lane.mult)
+}
+
+/** Power gained by one click throw: a x1 training throw, wherever you are. */
+export const clickGain = (profile, now) => throwGain(profile, now, 1)
 
 // --- Training, levels, rebirth ------------------------------------------------------
 
@@ -168,26 +176,32 @@ export function rebirthProgress(profile) {
   return Math.max(0, Math.min(1, done / Math.max(1, cap - 1)))
 }
 
-export function applyTrain(profile, laneIndex, now) {
-  if (!isLaneUnlocked(profile, laneIndex)) return { ok: false, error: 'Lane locked' }
-  const gain = trainGain(profile, laneIndex, now)
+/** Banks a training throw's Power and its step of level progress. Returns leveledUp. */
+function addTraining(profile, gain) {
   profile.power += gain
   profile.stats.trains += 1
   profile.stats.bestPower = Math.max(profile.stats.bestPower, profile.power)
-  profile.lastLane = laneIndex
-
-  let leveledUp = false
-  if (!isMaxLevel(profile)) {
-    profile.levelProgress += 1
-    if (profile.levelProgress >= LEVEL_STEPS) {
-      profile.levelProgress = 0
-      profile.level += 1
-      leveledUp = true
-    }
-  } else {
+  if (isMaxLevel(profile)) {
     profile.levelProgress = 0
+    return false
   }
-  return { ok: true, gain, leveledUp }
+  profile.levelProgress += 1
+  if (profile.levelProgress < LEVEL_STEPS) return false
+  profile.levelProgress = 0
+  profile.level += 1
+  return true
+}
+
+export function applyTrain(profile, laneIndex, now) {
+  if (!isLaneUnlocked(profile, laneIndex)) return { ok: false, error: 'Lane locked' }
+  const gain = trainGain(profile, laneIndex, now)
+  profile.lastLane = laneIndex
+  return { ok: true, gain, leveledUp: addTraining(profile, gain) }
+}
+
+export function applyClick(profile, now) {
+  const gain = clickGain(profile, now)
+  return { ok: true, gain, leveledUp: addTraining(profile, gain) }
 }
 
 /**

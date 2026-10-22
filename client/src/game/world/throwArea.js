@@ -5,34 +5,53 @@ import { SHOP_BOARD, STAGE, THROW_AREA } from '@shared/world'
 const FONT = '"Fredoka One", "Arial Rounded MT Bold", sans-serif'
 
 /**
- * Big outlined text painted on a textured quad, slanted by shear (the font has no
- * italic face). `fill` is a colour or a top-to-bottom list of gradient stops.
- * Every painted sign shares one material setup, so one shader program.
+ * Big chunky lettering painted on a textured quad, slanted by shear (the font has no
+ * italic face): a solid extruded edge in `edge` under a thick dark outline, the face
+ * filled with a top-to-bottom gradient of `fill` stops, and a glossy band across the
+ * top of each letter. Every painted sign shares one material setup, so one shader
+ * program.
  */
-function paintText(text, maxTexture, { aspect, fill, slant = 0.22, worldWidth }) {
+function paintText(text, maxTexture, { aspect, fill, edge, slant = 0.22, worldWidth }) {
   const width = Math.min(1024, maxTexture)
   const height = Math.round(width * aspect)
   const canvas = document.createElement('canvas')
   canvas.width = width
   canvas.height = height
   const ctx = canvas.getContext('2d')
-  const size = height * 0.78
+  // As tall as the canvas allows, shrunk if needed so the outline and slant still fit.
+  ctx.font = `100px ${FONT}`
+  const size = Math.min(height * 0.7, (100 * width * 0.95) / (ctx.measureText(text).width * (1 + slant * 0.5)))
+  const x = width / 2
+  const y = height * 0.46
+  const depth = size * 0.1
   ctx.font = `${size}px ${FONT}`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.lineJoin = 'round'
   ctx.setTransform(1, 0, -slant, 1, height * slant * 0.55, 0)
-  ctx.lineWidth = size * 0.2
-  ctx.strokeStyle = '#1b1b1f'
-  ctx.strokeText(text, width / 2, height / 2 + size * 0.06)
-  if (Array.isArray(fill)) {
-    const gradient = ctx.createLinearGradient(0, height * 0.15, 0, height * 0.85)
-    fill.forEach((stop, i) => gradient.addColorStop(i / (fill.length - 1), stop))
-    ctx.fillStyle = gradient
-  } else {
-    ctx.fillStyle = fill
+
+  // The extruded edge: the outlined letters stacked downwards, darkest at the back.
+  ctx.lineWidth = size * 0.22
+  ctx.strokeStyle = '#10142a'
+  ctx.fillStyle = edge
+  for (let i = depth; i > 0; i -= Math.max(1, depth / 8)) {
+    ctx.strokeText(text, x, y + i)
+    ctx.fillText(text, x, y + i)
   }
-  ctx.fillText(text, width / 2, height / 2)
+  // Outline and face.
+  ctx.strokeText(text, x, y)
+  const gradient = ctx.createLinearGradient(0, y - size * 0.45, 0, y + size * 0.45)
+  fill.forEach((stop, i) => gradient.addColorStop(i / (fill.length - 1), stop))
+  ctx.fillStyle = gradient
+  ctx.fillText(text, x, y)
+  // Gloss on the upper part of the letters only (drawn onto what's already there).
+  ctx.globalCompositeOperation = 'source-atop'
+  const gloss = ctx.createLinearGradient(0, y - size * 0.45, 0, y)
+  gloss.addColorStop(0, 'rgba(255,255,255,0.55)')
+  gloss.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = gloss
+  ctx.fillRect(-width, y - size * 0.45, width * 3, size * 0.4)
+  ctx.globalCompositeOperation = 'source-over'
 
   const texture = new CanvasTexture(canvas)
   texture.colorSpace = SRGBColorSpace
@@ -59,7 +78,12 @@ export async function createPaintedSigns(maxTexture) {
   await document.fonts?.load(`64px ${FONT}`).catch(() => null)
 
   const padWidth = THROW_AREA.maxX - THROW_AREA.minX
-  const throwArea = paintText('THROW AREA', maxTexture, { aspect: 0.22, fill: '#ffffff', worldWidth: padWidth })
+  const throwArea = paintText('THROW AREA', maxTexture, {
+    aspect: 0.24,
+    fill: ['#ffffff', '#c6f2ff', '#3fb6ff'],
+    edge: '#1f5fd6',
+    worldWidth: padWidth,
+  })
   // Just above the pad's raised yellow fill (its top is 0.12 up), centred on it.
   throwArea.position = [0, STAGE.height + 0.15, (THROW_AREA.minZ + THROW_AREA.maxZ) / 2]
   throwArea.rotation = [-Math.PI / 2, 0, 0]
@@ -67,7 +91,8 @@ export async function createPaintedSigns(maxTexture) {
   const boardWidth = SHOP_BOARD.maxZ - SHOP_BOARD.minZ - 3
   const board = paintText('FRISBEES', maxTexture, {
     aspect: 0.26,
-    fill: ['#fff6b0', '#ffd21f', '#ff8a00'],
+    fill: ['#fffbd0', '#ffd21f', '#ff8a00'],
+    edge: '#c2410c',
     slant: 0.14,
     worldWidth: boardWidth,
   })

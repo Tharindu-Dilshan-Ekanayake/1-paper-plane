@@ -124,6 +124,22 @@ test('planes can only be bought standing on their pad', () => {
   assert.equal(p.ownedPlanes.length, 2)
 })
 
+test('click throws train at x1, rate limited and not in the throw area', () => {
+  const p = createProfile('a', 'A')
+  const pos = { x: 0, z: 14 }
+  const s = new PlayerSession(p, { now: 0, emit: () => {}, getPosition: () => pos })
+  s.handle('click', {}, 1000)
+  assert.equal(p.power, 1)
+  assert.equal(p.levelProgress, 1)
+  s.handle('click', {}, 1050)
+  assert.equal(p.power, 1)
+  s.handle('click', {}, 1200)
+  assert.equal(p.power, 2)
+  Object.assign(pos, { x: 0, z: -33 })
+  s.handle('click', {}, 2000)
+  assert.equal(p.power, 2)
+})
+
 test('the shop sells for Wins only', () => {
   const p = createProfile('a', 'A')
   const s = new PlayerSession(p, { now: 0, emit: () => {}, getPosition: () => ({ x: 0, z: 0 }) })

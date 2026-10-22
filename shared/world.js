@@ -81,8 +81,8 @@ export const SHOP_STAGES = [
   { minX: 23.5, maxX: 34, minZ: -25, maxZ: 11, height: 0.5 },
   { minX: 36.5, maxX: 47, minZ: -25, maxZ: 11, height: 1 },
 ]
-/** The board along the back (east) edge, facing the plaza. */
-export const SHOP_BOARD = { x: 48.6, minZ: -23, maxZ: 9, top: 11 }
+/** The board along the back (east) edge, facing the plaza, high enough that its lettering clears the price labels. */
+export const SHOP_BOARD = { x: 48.6, minZ: -23, maxZ: 9, top: 16 }
 export const PAD_SIZE = 4.4
 
 /** Rows of display stands, nearest the plaza first: two rows on each stage. */

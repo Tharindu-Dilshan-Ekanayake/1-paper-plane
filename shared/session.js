@@ -1,6 +1,7 @@
-import { EGGS, ITEMS, LANES, MULTI_HATCH, PLANES, SHOP, TRAIN_INTERVAL, WORLD2_POWER } from './balance.js'
+import { CLICK_INTERVAL, EGGS, ITEMS, LANES, MULTI_HATCH, PLANES, SHOP, TRAIN_INTERVAL, WORLD2_POWER } from './balance.js'
 import {
   advanceTutorial,
+  applyClick,
   applyRebirth,
   applyThrow,
   applyTrain,
@@ -43,7 +44,8 @@ const PAD_SLACK = 2
  *
  * Events emitted (type, payload):
  * - 'profile'  { profile, session }  full state, after anything structural
- * - 'train'    { gain, power, level, levelProgress, leveledUp }  each training throw
+ * - 'train'    { lane, gain, power, level, levelProgress, leveledUp }  each training
+ *                throw; lane -1 is a click throw
  * - 'throw'    { distance, wins, trophies, duration, multiplier }  a throw to replay
  * - 'hatch'    { eggId, pets: [{ uid, id }] }  pets to reveal
  * - 'badge'    { id, name }
@@ -71,6 +73,8 @@ export class PlayerSession {
     this.trainTimer = 0
     /** Server time until which the player is watching a throw and can't train or throw. */
     this.busyUntil = 0
+    /** Server time of the last click throw that counted. */
+    this.lastClickAt = -Infinity
     this.dirty = false
   }
 
@@ -123,6 +127,15 @@ export class PlayerSession {
       if (key !== 'autoRebirth') return
       this.profile.settings.autoRebirth = Boolean(value)
       this.dirty = true
+    },
+
+    /** A click throw: anywhere but the throw area, at most one per CLICK_INTERVAL. */
+    click(_payload, now) {
+      if (now < this.busyUntil || now - this.lastClickAt < CLICK_INTERVAL * 1000) return
+      const p = this.getPosition()
+      if (inThrowArea(p.x, p.z)) return
+      this.lastClickAt = now
+      this.emitTrain(-1, applyClick(this.profile, now))
     },
 
     rebirth() {
@@ -299,20 +312,25 @@ export class PlayerSession {
     if (this.dirty) this.sendProfile()
   }
 
-  trainOnce(now) {
-    const result = applyTrain(this.profile, this.lane, now)
-    if (!result.ok) {
-      this.lane = -1
-      return
-    }
+  /** Tells the client about a training throw; `lane` is -1 for a click throw. */
+  emitTrain(lane, result) {
     this.emit('train', {
-      lane: this.lane,
+      lane,
       gain: result.gain,
       power: this.profile.power,
       level: this.profile.level,
       levelProgress: this.profile.levelProgress,
       leveledUp: result.leveledUp,
     })
+  }
+
+  trainOnce(now) {
+    const result = applyTrain(this.profile, this.lane, now)
+    if (!result.ok) {
+      this.lane = -1
+      return
+    }
+    this.emitTrain(this.lane, result)
     this.tutorial('train')
     if (this.profile.settings.autoRebirth && isMaxLevel(this.profile)) {
       const rebirth = applyRebirth(this.profile)
