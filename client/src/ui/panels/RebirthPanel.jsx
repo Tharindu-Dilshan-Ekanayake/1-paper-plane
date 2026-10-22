@@ -43,7 +43,7 @@ export function RebirthPanel() {
   const footer = (
     <p className="m-0 text-center" style={{ fontSize: u(36), marginTop: u(14) }}>
       <StrokeText stroke={u(8)} fill="#ff3b30">
-        Rebirth resets Power &amp; Levels. Wins and Planes stay!
+        Rebirth resets Power &amp; Levels. Wins and Frisbees stay!
       </StrokeText>
     </p>
   )

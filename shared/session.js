@@ -180,7 +180,7 @@ export class PlayerSession {
 
     buyPlane({ id }) {
       if (!this.nearPadFor(id)) {
-        this.toast('Stand on the plane’s pad in the Hangar to buy it', 'error')
+        this.toast('Stand on the frisbee’s pad in the Shop to buy it', 'error')
         return
       }
       const result = this.fail(buyPlane(this.profile, id))

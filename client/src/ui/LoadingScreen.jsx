@@ -1,13 +1,14 @@
 import { useProgress } from '@react-three/drei'
 import { useEffect, useState } from 'react'
 
+import { iconUrl } from './icons'
 import StrokeText from './StrokeText'
 
 const TIPS = [
   'Stand in a training lane to gain Power automatically!',
   'Rebirth to unlock better lanes and a higher level cap.',
   'More Power = longer throws = more Wins!',
-  'Spend Wins on better planes and eggs.',
+  'Spend Wins on better frisbees and eggs.',
   'Pets multiply all the Power you gain.',
 ]
 
@@ -47,11 +48,8 @@ export function LoadingScreen({ done }) {
         background: 'linear-gradient(180deg, #2f8ff2 0%, #6fc0fb 55%, #c6ec86 55.2%, #a9dd6a 100%)',
       }}
     >
-      <div className="pp-loading-plane" aria-hidden="true">
-        <svg viewBox="0 0 120 80" width="150" height="100">
-          <path d="M4 40 L116 6 L70 74 L58 48 Z" fill="#ffffff" stroke="#1b1b1b" strokeWidth="5" strokeLinejoin="round" />
-          <path d="M58 48 L116 6 L50 44 Z" fill="#d7e6f5" stroke="#1b1b1b" strokeWidth="4" strokeLinejoin="round" />
-        </svg>
+      <div className="pp-loading-disc" aria-hidden="true">
+        <img src={iconUrl('frisbee')} alt="" width="150" height="150" draggable={false} />
       </div>
 
       <h1 className="m-0 text-center leading-none" style={{ fontSize: 'clamp(40px, 9vw, 96px)', transform: 'rotate(-3deg)' }}>

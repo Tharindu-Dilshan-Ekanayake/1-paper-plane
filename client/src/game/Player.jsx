@@ -8,7 +8,7 @@ import { getGame } from '../store/game'
 import { getQuality } from '../store/quality'
 import ErrorBoundary from '../ui/ErrorBoundary'
 import FallbackAvatar from './FallbackAvatar'
-import { createPlaneModel } from './planeModel'
+import { createFrisbeeModel } from './frisbee'
 import PlayerAvatar from './PlayerAvatar'
 import { runtime } from './runtime'
 import useKeyboard from './useKeyboard'
@@ -34,31 +34,31 @@ const _up = new Vector3(0, 1, 0)
 const _clamped = { x: 0, z: 0 }
 
 /**
- * The equipped plane, held up in the right hand ready to throw, glowing in its own
- * colour. Hidden for the moment it's been thrown, so the flying copy reads as the
- * same plane.
+ * The equipped frisbee, held at the right side with its design turned out towards the
+ * camera, glowing in its own colour. Hidden for the moment it's been thrown, so the
+ * flying copy reads as the same frisbee.
  */
-function HeldPlane() {
+function HeldFrisbee() {
   const ref = useRef(null)
-  const model = useMemo(() => createPlaneModel({ glowSize: 1.35, glowIntensity: 0.65 }), [])
+  const model = useMemo(() => createFrisbeeModel({ glowSize: 1.5, glowIntensity: 0.6 }), [])
 
   useEffect(() => () => model.dispose(), [model])
 
   useFrame((state) => {
     const group = ref.current
     if (!group) return
-    group.setPlane(getGame().profile.equippedPlane)
-    group.setGlowSize(1.35 * getQuality().planeGlow)
+    group.setFrisbee(getGame().profile.equippedPlane)
+    group.setGlowSize(1.5 * getQuality().frisbeeGlow)
     // A gentle bob so it feels alive in the hand.
-    group.position.y = 1.48 + Math.sin(state.clock.elapsedTime * 2.4) * 0.03
+    group.position.y = 1.12 + Math.sin(state.clock.elapsedTime * 2.4) * 0.03
     // Released after the wind-up, back in hand once the swing finishes.
     const t = runtime.player.throwTimer
     group.visible = !(t > 0 && t < 0.24)
   })
 
-  // The character faces +Z locally, so its right hand is on -X. Nose forward and
-  // tilted up, wings banked towards the camera so the shape reads at a glance.
-  return <primitive ref={ref} object={model} position={[-0.8, 1.48, 0.12]} rotation={[-0.4, 0.1, 0.4]} scale={1.1} />
+  // The character faces +Z locally, so its right hand is on -X. The disc stands nearly
+  // upright at the hip, its top face turned out to the right and back to the camera.
+  return <primitive ref={ref} object={model} position={[-0.72, 1.12, 0.02]} rotation={[-0.5, 0, 1.05]} scale={0.95} />
 }
 
 /** Pushes a circle out of an axis-aligned rect. Returns true on contact. */
@@ -233,7 +233,7 @@ export function Player({ onAvatarReady }) {
   return (
     <group ref={groupRef}>
       <group ref={visualRef}>
-        <HeldPlane />
+        <HeldFrisbee />
         <ErrorBoundary fallback={<FallbackAvatar motionRef={motionRef} onReady={onAvatarReady} />}>
           <Suspense fallback={<FallbackAvatar motionRef={motionRef} />}>
             <PlayerAvatar onReady={onAvatarReady} targetHeight={PLAYER_HEIGHT} motionRef={motionRef} />

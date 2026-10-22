@@ -1,6 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
-import { DoubleSide, InstancedMesh, Matrix4, MeshLambertMaterial, Quaternion, Vector3 } from 'three'
+import { Matrix4, Quaternion, Vector3 } from 'three'
 
 import { formatNumber } from '@shared/format'
 
@@ -8,9 +8,8 @@ import { sfx } from '../../audio/sfx'
 import { getGame } from '../../store/game'
 import { getQuality } from '../../store/quality'
 import { iconUrl } from '../../ui/icons'
-import { PAPER_PLANE } from '../geometry'
+import { createFrisbeeMesh, disposeFrisbeeMesh, frisbeeGlow, frisbeeOrientation } from '../frisbee'
 import { createGlowInstances, disposeGlow } from '../glow'
-import { planeColor, planeGlow } from '../planes'
 import { runtime } from '../runtime'
 import { targetPoint } from '../world/targets'
 import { drainTrainFx } from './fxQueue'
@@ -28,16 +27,14 @@ const _m = new Matrix4()
 const _q = new Quaternion()
 const _p = new Vector3()
 const _prev = new Vector3()
-const _dir = new Vector3()
-const _s = new Vector3(0.7, 0.7, 0.7)
-const _forward = new Vector3(0, 0, 1)
+const _s = new Vector3(0.75, 0.75, 0.75)
 const _popupAt = new Vector3()
 const _glowScale = new Vector3()
 
 const LEVEL_GRADIENT = 'linear-gradient(180deg, #e0faff 0%, #7fe2ff 45%, #2fa8ff 100%)'
 
 /**
- * Training feedback: the character's throw, the plane flying into the target, and the
+ * Training feedback: the character's throw, the frisbee flying into the target, and the
  * "+N POWER" popup when it hits. Shots come from a fixed pool in one InstancedMesh.
  */
 export function TrainingFX() {
@@ -55,22 +52,13 @@ export function TrainingFX() {
     })),
   )
 
-  const mesh = useMemo(() => {
-    const material = new MeshLambertMaterial({ side: DoubleSide, flatShading: true, emissive: '#ffffff', emissiveIntensity: 0.2 })
-    const instanced = new InstancedMesh(PAPER_PLANE, material, MAX_SHOTS)
-    // Create the colour buffer up front so the first shot doesn't trigger a recompile.
-    instanced.setColorAt(0, planeColor('paper'))
-    instanced.count = 0
-    instanced.frustumCulled = false
-    return instanced
-  }, [])
+  const mesh = useMemo(() => createFrisbeeMesh(MAX_SHOTS), [])
 
   const glow = useMemo(() => createGlowInstances(MAX_SHOTS), [])
 
   useEffect(
     () => () => {
-      mesh.material.dispose()
-      mesh.dispose()
+      disposeFrisbeeMesh(mesh)
       disposeGlow(glow)
     },
     [mesh, glow],
@@ -101,10 +89,10 @@ export function TrainingFX() {
       )
     })
 
-    const planeId = getGame().profile.equippedPlane
-    const color = planeColor(planeId)
-    const glowColor = planeGlow(planeId)
-    const glowSize = 1.5 * getQuality().planeGlow
+    const frisbeeId = getGame().profile.equippedPlane
+    const glowColor = frisbeeGlow(frisbeeId)
+    const glowSize = 1.3 * getQuality().frisbeeGlow
+    const spin = state.clock.elapsedTime * 25
     let count = 0
     for (const shot of shots.current) {
       if (!shot.active) continue
@@ -131,10 +119,10 @@ export function TrainingFX() {
       _prev.y += Math.sin(Math.max(0, flight - 0.05) * Math.PI) * ARC_HEIGHT
       _p.lerpVectors(shot.from, shot.to, flight)
       _p.y += arc
-      _dir.subVectors(_p, _prev).normalize()
-      _q.setFromUnitVectors(_forward, _dir)
+      // Flat and spinning, tipped a little towards the target.
+      frisbeeOrientation(_q, spin + count, 0.25, 0)
       instanced.setMatrixAt(count, _m.compose(_p, _q, _s))
-      instanced.setColorAt(count, color)
+      instanced.setStyle(count, frisbeeId)
       halos.setMatrixAt(count, _m.compose(_p, _q, _glowScale.setScalar(glowSize)))
       halos.setColorAt(count, glowColor)
       count += 1
@@ -143,7 +131,6 @@ export function TrainingFX() {
     halos.count = count
     instanced.instanceMatrix.needsUpdate = true
     halos.instanceMatrix.needsUpdate = true
-    if (instanced.instanceColor) instanced.instanceColor.needsUpdate = true
     if (halos.instanceColor) halos.instanceColor.needsUpdate = true
 
     updatePopups(state.camera, size.width, size.height)

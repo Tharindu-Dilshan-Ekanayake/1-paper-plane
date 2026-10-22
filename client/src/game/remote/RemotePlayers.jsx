@@ -6,7 +6,6 @@ import {
   DoubleSide,
   InstancedMesh,
   Matrix4,
-  MeshBasicMaterial,
   MeshLambertMaterial,
   Quaternion,
   Vector3,
@@ -16,9 +15,8 @@ import { THROW_LINE_Z } from '@shared/world'
 
 import { remotePlayers } from '../../net/remotePlayers'
 import { getQuality } from '../../store/quality'
-import { PAPER_PLANE } from '../geometry'
+import { createFrisbeeMesh, disposeFrisbeeMesh, frisbeeGlow, frisbeeOrientation } from '../frisbee'
 import { createGlowInstances, disposeGlow } from '../glow'
-import { planeColor, planeGlow } from '../planes'
 import { runtime } from '../runtime'
 import { hideNameplatesFrom, NAMEPLATE_POOL_SIZE, placeNameplate } from './nameplates'
 
@@ -61,7 +59,6 @@ const _p = new Vector3()
 const _s = new Vector3()
 const _v = new Vector3()
 const _up = new Vector3(0, 1, 0)
-const _forward = new Vector3(0, 0, 1)
 const _target = new Vector3()
 const _dir = new Vector3()
 const _prev = new Vector3()
@@ -110,11 +107,8 @@ export function RemotePlayers() {
     body.count = 0
     body.frustumCulled = false
     body.castShadow = true
-    const ghostMaterial = new MeshBasicMaterial({ transparent: true, opacity: 0.7, side: DoubleSide, depthWrite: false })
-    const ghosts = new InstancedMesh(PAPER_PLANE, ghostMaterial, MAX_GHOSTS)
-    ghosts.setColorAt(0, _color.set('#ffffff'))
-    ghosts.count = 0
-    ghosts.frustumCulled = false
+    // Other players' throws: their own frisbees (same mesh and material as yours).
+    const ghosts = createFrisbeeMesh(MAX_GHOSTS)
     return { body, ghosts, ghostGlows: createGlowInstances(MAX_GHOSTS, 0.6) }
   }, [])
 
@@ -123,8 +117,7 @@ export function RemotePlayers() {
       assets.body.geometry.dispose()
       assets.body.material.dispose()
       assets.body.dispose()
-      assets.ghosts.material.dispose()
-      assets.ghosts.dispose()
+      disposeFrisbeeMesh(assets.ghosts)
       disposeGlow(assets.ghostGlows)
       hideNameplatesFrom(0)
     },
@@ -223,7 +216,7 @@ export function RemotePlayers() {
     body.instanceMatrix.needsUpdate = true
     if (body.instanceColor) body.instanceColor.needsUpdate = true
 
-    // --- Ghost planes -------------------------------------------------------------
+    // --- Ghost frisbees -------------------------------------------------------------
     let g = 0
     for (let i = runtime.ghostThrows.length - 1; i >= 0; i -= 1) {
       const throwInfo = runtime.ghostThrows[i]
@@ -238,19 +231,17 @@ export function RemotePlayers() {
       const z = throwInfo.z + (endZ - throwInfo.z) * eased
       const y = 1.6 + 3.9 * (1 - Math.exp(-(throwInfo.z - z) / 9)) - 5 * Math.max(0, p - 0.86) / 0.14
       _p.set(throwInfo.x * (1 - Math.min(1, p * 4)), Math.max(0.35, y), z)
-      _dir.set(0, 0, -1)
-      _q.setFromUnitVectors(_forward, _dir)
-      ghosts.setMatrixAt(g, _m.compose(_p, _q, _s.set(2.2, 2.2, 2.2)))
-      ghosts.setColorAt(g, planeColor(throwInfo.planeId))
-      ghostGlows.setMatrixAt(g, _m.compose(_p, _q, _s.setScalar(3.2 * settings.planeGlow)))
-      ghostGlows.setColorAt(g, planeGlow(throwInfo.planeId))
+      frisbeeOrientation(_q, now * 0.02 + i, 0.12, 0)
+      ghosts.setMatrixAt(g, _m.compose(_p, _q, _s.set(2, 2, 2)))
+      ghosts.setStyle(g, throwInfo.planeId)
+      ghostGlows.setMatrixAt(g, _m.compose(_p, _q, _s.setScalar(3 * settings.frisbeeGlow)))
+      ghostGlows.setColorAt(g, frisbeeGlow(throwInfo.planeId))
       g += 1
     }
     ghosts.count = g
     ghostGlows.count = g
     ghosts.instanceMatrix.needsUpdate = true
     ghostGlows.instanceMatrix.needsUpdate = true
-    if (ghosts.instanceColor) ghosts.instanceColor.needsUpdate = true
     if (ghostGlows.instanceColor) ghostGlows.instanceColor.needsUpdate = true
   })
 

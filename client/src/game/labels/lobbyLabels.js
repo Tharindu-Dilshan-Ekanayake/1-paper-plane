@@ -3,6 +3,7 @@ import { formatNumber } from '@shared/format'
 import {
   EGG_STANDS,
   FREE_REWARD,
+  HANGAR,
   LANE_TARGET_X,
   laneCenterZ,
   PLANE_PADS,
@@ -75,7 +76,7 @@ export function padLabelSpec(index, state) {
         ? { text: 'OWNED', size: 40, gradient: TEXT.green }
         : { text: `${formatNumber(plane.cost)} Wins`, size: 40, icon: 'trophy', gradient: state === 'locked' ? TEXT.red : TEXT.gold }
   return {
-    lines: [{ text: `+${formatNumber(plane.power)} / Power`, size: 38, icon: 'plane', fill: '#ffffff' }, status],
+    lines: [{ text: `+${formatNumber(plane.power)} / Power`, size: 38, icon: 'frisbee', fill: '#ffffff' }, status],
     pxPerUnit: 70,
   }
 }
@@ -83,7 +84,7 @@ export function padLabelSpec(index, state) {
 /** Largest a pad label can get, so its atlas slot fits every state. */
 const padReserve = (index) => ({
   lines: [
-    { text: `+${formatNumber(PLANES[index].power)} / Power`, size: 38, icon: 'plane' },
+    { text: `+${formatNumber(PLANES[index].power)} / Power`, size: 38, icon: 'frisbee' },
     { text: `${formatNumber(PLANES[index].cost)} Wins`, size: 40, icon: 'trophy' },
   ],
 })
@@ -152,6 +153,14 @@ const freeRewardLabel = () => ({
   fade: 90,
 })
 
+/** The shop's sign, over its open front. */
+const shopLabel = () => ({
+  id: 'shop',
+  position: [HANGAR.minX - 0.5, HANGAR.height + 2.6, (HANGAR.minZ + HANGAR.maxZ) / 2],
+  spec: { lines: [{ text: 'FRISBEE SHOP', size: 70, icon: 'frisbee', gradient: TEXT.blue }], pxPerUnit: 30 },
+  fade: 170,
+})
+
 /** The sign on the stage's launch arch. */
 const stageLabel = () => ({
   id: 'stage',
@@ -175,5 +184,5 @@ const portalLabel = () => ({
 
 /** Every label in the lobby. */
 export function lobbyLabels(profile, { sphinxStock = 0 } = {}) {
-  return [...laneLabels(), ...padLabels(profile), ...eggLabels(), sphinxLabel(sphinxStock), freeRewardLabel(), portalLabel(), stageLabel()]
+  return [...laneLabels(), ...padLabels(profile), ...eggLabels(), sphinxLabel(sphinxStock), freeRewardLabel(), portalLabel(), stageLabel(), shopLabel()]
 }

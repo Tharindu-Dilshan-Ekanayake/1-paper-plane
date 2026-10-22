@@ -29,7 +29,7 @@ import { getQuality, useQuality } from '../../store/quality'
 import { iconUrl } from '../../ui/icons'
 import { BlockSet, disposeBlocks, PropBuilder } from '../blocks'
 import { spawnPopup } from '../fx/popups'
-import { createPlaneModel } from '../planeModel'
+import { createFrisbeeModel, frisbeeOrientation } from '../frisbee'
 import { LabelBatch } from '../labels/LabelBatch'
 import { createToyMaterial, sharedMaterials, STYLE } from '../materials'
 import { runtime } from '../runtime'
@@ -84,8 +84,6 @@ const _p = new Vector3()
 const _s = new Vector3()
 const _v = new Vector3()
 const _look = new Vector3()
-const _forward = new Vector3(0, 0, 1)
-const _dir = new Vector3()
 const _prevPlane = new Vector3()
 /** Stable vector for runtime.flightFocus (the scratch ones are reused mid-frame). */
 const planeFocus = new Vector3()
@@ -173,7 +171,7 @@ function planePosition(t, start, out) {
 }
 
 /**
- * Lazily loaded: the track, the flying plane and its chase camera. While nobody is
+ * Lazily loaded: the track, the flying frisbee and its chase camera. While nobody is
  * flying it still streams the first stretch of track, which is the street you see
  * leading out of the lobby.
  */
@@ -202,8 +200,8 @@ export default function Flight() {
     trophies.count = 0
     trophies.frustumCulled = false
 
-    const planeModel = createPlaneModel({ glowSize: 2 })
-    planeModel.scale.setScalar(2.2)
+    const planeModel = createFrisbeeModel({ glowSize: 1.9 })
+    planeModel.scale.setScalar(2)
     planeModel.visible = false
 
     const streakMaterial = new MeshBasicMaterial({
@@ -362,16 +360,15 @@ export default function Flight() {
       flight.meter = Math.max(0, Math.min(flight.distance, THROW_LINE_Z - _p.z))
       focus = flight.meter
       speed = _prevPlane.distanceTo(_p) / Math.max(delta, 1e-3)
-      _dir.subVectors(_p, _prevPlane)
-      if (_dir.lengthSq() > 1e-6) _q.setFromUnitVectors(_forward, _dir.normalize())
+      // Climbing or dropping tips the disc a little; it banks gently side to side.
+      const climb = Math.max(-0.4, Math.min(0.4, (_p.y - _prevPlane.y) * 6))
       _prevPlane.copy(_p)
       if (plane) {
         plane.visible = true
         plane.position.copy(_p)
-        plane.quaternion.copy(_q)
-        plane.rotateZ(Math.sin(now * 0.004) * 0.25 * (1 - t))
-        plane.setPlane(getGame().profile.equippedPlane)
-        plane.setGlowSize(2 * settings.planeGlow)
+        frisbeeOrientation(plane.quaternion, now * 0.022, 0.12 + climb, Math.sin(now * 0.0025) * 0.22 * (1 - t))
+        plane.setFrisbee(getGame().profile.equippedPlane)
+        plane.setGlowSize(1.9 * settings.frisbeeGlow)
       }
       runtime.flightFocus = planeFocus.copy(_p)
       writeDistance(flight.meter)

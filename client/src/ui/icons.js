@@ -180,9 +180,17 @@ const gear = svg(
   ]),
 )
 
-const plane = svg(
-  `<path d="M4 50L96 14 66 90 52 62z" fill="#ffffff" stroke="${OUT}" stroke-width="6" stroke-linejoin="round"/>
-  <path d="M52 62L96 14 40 56z" fill="#c9dcf2" stroke="${OUT}" stroke-width="5" stroke-linejoin="round"/>`,
+/** A frisbee seen at an angle: blue top with white rings, darker rim under it. */
+const frisbee = svg(
+  `<ellipse cx="50" cy="58" rx="45" ry="23" fill="#1453b8" stroke="${OUT}" stroke-width="6"/>
+  <ellipse cx="50" cy="50" rx="45" ry="23" fill="url(#fz-g)" stroke="${OUT}" stroke-width="6"/>
+  <ellipse cx="50" cy="50" rx="31" ry="15" fill="none" stroke="#ffffff" stroke-width="5"/>
+  <ellipse cx="50" cy="50" rx="12" ry="5.6" fill="#ffffff"/>
+  <path d="M18 44c6-8 18-13 30-14" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity=".7"/>`,
+  vgrad('fz-g', [
+    [0, '#7fd2ff'],
+    [1, '#2f7fe6'],
+  ]),
 )
 
 const autoThrow = svg(
@@ -192,7 +200,8 @@ const autoThrow = svg(
   <path d="M80 48a30 30 0 0 1-50 24" fill="none" stroke="${OUT}" stroke-width="14" stroke-linecap="round"/>
   <path d="M80 48a30 30 0 0 1-50 24" fill="none" stroke="#7fe7ff" stroke-width="7" stroke-linecap="round"/>
   <path d="M38 86L18 76l16-14z" fill="#7fe7ff" stroke="${OUT}" stroke-width="4.5" stroke-linejoin="round"/>
-  <path d="M30 50l40-14-12 30-6-11z" fill="#fff" stroke="${OUT}" stroke-width="4" stroke-linejoin="round"/>`,
+  <ellipse cx="50" cy="52" rx="20" ry="9" fill="#fff" stroke="${OUT}" stroke-width="4"/>
+  <ellipse cx="50" cy="51" rx="9" ry="3.6" fill="#7fe7ff"/>`,
 )
 
 /** A round potion flask with a cork, filled with `liquid` and a small badge icon. */
@@ -307,7 +316,7 @@ export const ICON_SVGS = {
   calendar,
   star,
   gear,
-  plane,
+  frisbee,
   autoThrow,
   potionWins,
   potionPower,

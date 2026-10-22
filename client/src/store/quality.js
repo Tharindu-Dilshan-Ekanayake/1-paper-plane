@@ -30,8 +30,8 @@ export const PRESETS = {
     labelDistance: 70,
     /** How much of the track's side scenery to spawn (0-1). */
     decorDensity: 0.45,
-    /** Plane halo size multiplier. */
-    planeGlow: 0.8,
+    /** Frisbee halo size multiplier. */
+    frisbeeGlow: 0.8,
   },
   MEDIUM: {
     dpr: 1.25,
@@ -48,7 +48,7 @@ export const PRESETS = {
     remoteNameDistance: 28,
     labelDistance: 110,
     decorDensity: 0.75,
-    planeGlow: 1,
+    frisbeeGlow: 1,
   },
   HIGH: {
     dpr: 1.5,
@@ -65,7 +65,7 @@ export const PRESETS = {
     remoteNameDistance: 35,
     labelDistance: 150,
     decorDensity: 1,
-    planeGlow: 1,
+    frisbeeGlow: 1,
   },
 }
 

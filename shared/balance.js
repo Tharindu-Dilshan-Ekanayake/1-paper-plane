@@ -12,7 +12,7 @@
 export const TRAIN_INTERVAL = 0.6
 /** Training throws per level. */
 export const LEVEL_STEPS = 10
-/** Each level adds this fraction to the plane's base power: gain x (1 + level x k). */
+/** Each level adds this fraction to the frisbee's base power: gain x (1 + level x k). */
 export const LEVEL_GAIN = 0.15
 
 /**
@@ -43,20 +43,25 @@ export function levelCap(rebirths) {
 /** Power multiplier from rebirths: R0 = x1, R1 = x2, R2 = x3 ... */
 export const rebirthMultiplier = (rebirths) => rebirths + 1
 
-// --- Planes -----------------------------------------------------------------------
+// --- Frisbees ---------------------------------------------------------------------
 
-/** `power` is base power per training throw; `cost` is in Wins. */
+/**
+ * The frisbees you throw. `power` is base power per training throw; `cost` is in Wins.
+ *
+ * The table (and the profile's `equippedPlane` / `ownedPlanes`) keep their original
+ * plane names and ids, so saves from before the switch to frisbees still load.
+ */
 export const PLANES = [
-  { id: 'paper', name: 'Paper Plane', power: 1, cost: 0 },
-  { id: 'sky', name: 'Sky Dart', power: 2, cost: 3 },
-  { id: 'newspaper', name: 'Newspaper', power: 5, cost: 28 },
-  { id: 'cardboard', name: 'Cardboard Jet', power: 11, cost: 110 },
-  { id: 'racer', name: 'Red Racer', power: 21, cost: 280 },
-  { id: 'ocean', name: 'Ocean Glider', power: 46, cost: 840 },
-  { id: 'jungle', name: 'Jungle Jet', power: 98, cost: 2100 },
-  { id: 'royal', name: 'Royal Falcon', power: 210, cost: 5600 },
-  { id: 'crystal', name: 'Crystal Comet', power: 490, cost: 14000 },
-  { id: 'golden', name: 'Golden Phoenix', power: 1100, cost: 35000 },
+  { id: 'paper', name: 'Classic Frisbee', power: 1, cost: 0 },
+  { id: 'sky', name: 'Sky Disc', power: 2, cost: 3 },
+  { id: 'newspaper', name: 'Sunny Disc', power: 5, cost: 28 },
+  { id: 'cardboard', name: 'Pizza Disc', power: 11, cost: 110 },
+  { id: 'racer', name: 'Racer Disc', power: 21, cost: 280 },
+  { id: 'ocean', name: 'Wave Disc', power: 46, cost: 840 },
+  { id: 'jungle', name: 'Jungle Disc', power: 98, cost: 2100 },
+  { id: 'royal', name: 'Royal Disc', power: 210, cost: 5600 },
+  { id: 'crystal', name: 'Crystal Disc', power: 490, cost: 14000 },
+  { id: 'golden', name: 'Golden Disc', power: 1100, cost: 35000 },
 ]
 
 // --- Throwing ---------------------------------------------------------------------
@@ -222,7 +227,7 @@ export const TUTORIAL = [
   { text: 'Throw one time', event: 'throw', target: 'throw' },
   { text: 'Go to the FREE Training Area', event: 'train', target: 'lane0' },
   { text: 'Get your first Rebirth', event: 'rebirth', target: 'rebirth' },
-  { text: 'Buy a better plane in the Hangar', event: 'buyPlane', target: 'hangar' },
+  { text: 'Buy a better frisbee in the Shop', event: 'buyPlane', target: 'hangar' },
   { text: 'Hatch a pet from an egg', event: 'hatch', target: 'eggs' },
 ]
 

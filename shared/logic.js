@@ -275,10 +275,10 @@ export function applyThrow(profile, now) {
 
 export function buyPlane(profile, planeId) {
   const plane = PLANES.find((p) => p.id === planeId)
-  if (!plane) return { ok: false, error: 'Unknown plane' }
+  if (!plane) return { ok: false, error: 'Unknown frisbee' }
   if (profile.ownedPlanes.includes(planeId)) return equipPlane(profile, planeId)
   const index = planeIndex(planeId)
-  // Planes unlock in order, like the reference's hangar.
+  // Frisbees unlock in order, like the reference's shop.
   const previous = PLANES[index - 1]
   if (previous && !profile.ownedPlanes.includes(previous.id)) {
     return { ok: false, error: `Buy the ${previous.name} first!` }
@@ -291,7 +291,7 @@ export function buyPlane(profile, planeId) {
 }
 
 export function equipPlane(profile, planeId) {
-  if (!profile.ownedPlanes.includes(planeId)) return { ok: false, error: 'You don’t own that plane' }
+  if (!profile.ownedPlanes.includes(planeId)) return { ok: false, error: 'You don’t own that frisbee' }
   profile.equippedPlane = planeId
   return { ok: true, equipped: true, planeId }
 }
