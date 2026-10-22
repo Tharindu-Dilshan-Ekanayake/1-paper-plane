@@ -1,6 +1,6 @@
-import { OctahedronGeometry, SphereGeometry, TorusGeometry } from 'three'
+import { Matrix4, OctahedronGeometry, SphereGeometry, TorusGeometry } from 'three'
 
-import { LANE_COUNT, LANE_TARGET_Z, laneCenterX } from '@shared/world'
+import { LANE_COUNT, LANE_TARGET_X, laneCenterZ } from '@shared/world'
 
 import { disc, star } from '../geometry'
 import { STYLE } from '../materials'
@@ -15,16 +15,21 @@ import { STYLE } from '../materials'
 
 /** Height of the board centre; the pedestal top is at 1.2. */
 export const TARGET_Y = 3
-/** Where training shots aim: the board face. */
-export const targetPoint = (lane) => [laneCenterX(lane), TARGET_Y, LANE_TARGET_Z + 0.35]
+/** Where training shots aim: the board face, which looks east down its lane. */
+export const targetPoint = (lane) => [LANE_TARGET_X + 0.35, TARGET_Y, laneCenterZ(lane)]
 
-const FACE = LANE_TARGET_Z + 0.2
+/**
+ * Designs are written facing +Z at the origin (z = 0 is the board, FACE its front) and
+ * turned to face east (+X) at their lane's end by buildTargets.
+ */
+const BOARD_Z = 0
+const FACE = BOARD_Z + 0.2
 
 function board(props, x, color, frame, style = STYLE.STUDS) {
-  props.box(x, TARGET_Y, LANE_TARGET_Z, 3.4, 3.4, 0.3, frame, style)
-  props.box(x, TARGET_Y, LANE_TARGET_Z + 0.08, 3.0, 3.0, 0.3, color, style)
+  props.box(x, TARGET_Y, BOARD_Z, 3.4, 3.4, 0.3, frame, style)
+  props.box(x, TARGET_Y, BOARD_Z + 0.08, 3.0, 3.0, 0.3, color, style)
   // Post down to the pedestal.
-  props.box(x, 1.5, LANE_TARGET_Z - 0.05, 0.6, 0.6, 0.4, frame)
+  props.box(x, 1.5, BOARD_Z - 0.05, 0.6, 0.6, 0.4, frame)
 }
 
 function rings(props, x, list) {
@@ -95,7 +100,7 @@ const DESIGNS = [
   },
   // 7: rainbow ring, VERY OP!
   (p, x) => {
-    p.box(x, 1.6, LANE_TARGET_Z, 0.5, 1.2, 0.5, '#ffffff')
+    p.box(x, 1.6, BOARD_Z, 0.5, 1.2, 0.5, '#ffffff')
     const hues = ['#ff3b5c', '#ff8a1f', '#ffe53b', '#4ef05a', '#2fc6ff', '#5a6cff', '#c35cff', '#ff4fd8']
     hues.forEach((color, i) => {
       const g = new TorusGeometry(1.45, 0.32, 8, 6, (Math.PI * 2) / hues.length + 0.02)
@@ -112,5 +117,10 @@ const DESIGNS = [
 ]
 
 export function buildTargets(props) {
-  for (let i = 0; i < LANE_COUNT; i += 1) DESIGNS[i](props, laneCenterX(i))
+  const turn = new Matrix4()
+  for (let i = 0; i < LANE_COUNT; i += 1) {
+    props.transform = turn.makeRotationY(Math.PI / 2).setPosition(LANE_TARGET_X, 0, laneCenterZ(i))
+    DESIGNS[i](props, 0)
+  }
+  props.transform = null
 }

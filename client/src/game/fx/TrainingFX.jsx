@@ -6,9 +6,11 @@ import { formatNumber } from '@shared/format'
 
 import { sfx } from '../../audio/sfx'
 import { getGame } from '../../store/game'
+import { getQuality } from '../../store/quality'
 import { iconUrl } from '../../ui/icons'
 import { PAPER_PLANE } from '../geometry'
-import { planeColor } from '../planes'
+import { createGlowInstances, disposeGlow } from '../glow'
+import { planeColor, planeGlow } from '../planes'
 import { runtime } from '../runtime'
 import { targetPoint } from '../world/targets'
 import { drainTrainFx } from './fxQueue'
@@ -30,6 +32,7 @@ const _dir = new Vector3()
 const _s = new Vector3(0.7, 0.7, 0.7)
 const _forward = new Vector3(0, 0, 1)
 const _popupAt = new Vector3()
+const _glowScale = new Vector3()
 
 const LEVEL_GRADIENT = 'linear-gradient(180deg, #e0faff 0%, #7fe2ff 45%, #2fa8ff 100%)'
 
@@ -40,6 +43,7 @@ const LEVEL_GRADIENT = 'linear-gradient(180deg, #e0faff 0%, #7fe2ff 45%, #2fa8ff
 export function TrainingFX() {
   const size = useThree((s) => s.size)
   const meshRef = useRef(null)
+  const glowRef = useRef(null)
   const shots = useRef(
     Array.from({ length: MAX_SHOTS }, () => ({
       active: false,
@@ -52,7 +56,7 @@ export function TrainingFX() {
   )
 
   const mesh = useMemo(() => {
-    const material = new MeshLambertMaterial({ side: DoubleSide, flatShading: true })
+    const material = new MeshLambertMaterial({ side: DoubleSide, flatShading: true, emissive: '#ffffff', emissiveIntensity: 0.2 })
     const instanced = new InstancedMesh(PAPER_PLANE, material, MAX_SHOTS)
     // Create the colour buffer up front so the first shot doesn't trigger a recompile.
     instanced.setColorAt(0, planeColor('paper'))
@@ -61,25 +65,30 @@ export function TrainingFX() {
     return instanced
   }, [])
 
+  const glow = useMemo(() => createGlowInstances(MAX_SHOTS), [])
+
   useEffect(
     () => () => {
       mesh.material.dispose()
       mesh.dispose()
+      disposeGlow(glow)
     },
-    [mesh],
+    [mesh, glow],
   )
 
   useFrame((state, rawDelta) => {
     const delta = Math.min(rawDelta, 0.05)
     const instanced = meshRef.current
-    if (!instanced) return
+    const halos = glowRef.current
+    if (!instanced || !halos) return
     const player = runtime.player
 
     drainTrainFx((event) => {
       player.throwTimer = THROW_ANIM
-      // Face the target while training, unless walking somewhere.
-      if (player.speed < 0.5) player.yaw = Math.PI
       const shot = shots.current.find((s) => !s.active) || shots.current[0]
+      shot.to.fromArray(targetPoint(event.lane))
+      // Face the target while training, unless walking somewhere.
+      if (player.speed < 0.5) player.yaw = Math.atan2(shot.to.x - player.position.x, shot.to.z - player.position.z)
       shot.active = true
       shot.t = 0
       shot.gain = event.gain
@@ -90,10 +99,12 @@ export function TrainingFX() {
         player.position.y + 1.55,
         player.position.z + Math.sin(player.yaw) * side,
       )
-      shot.to.fromArray(targetPoint(event.lane))
     })
 
-    const color = planeColor(getGame().profile.equippedPlane)
+    const planeId = getGame().profile.equippedPlane
+    const color = planeColor(planeId)
+    const glowColor = planeGlow(planeId)
+    const glowSize = 1.5 * getQuality().planeGlow
     let count = 0
     for (const shot of shots.current) {
       if (!shot.active) continue
@@ -124,16 +135,26 @@ export function TrainingFX() {
       _q.setFromUnitVectors(_forward, _dir)
       instanced.setMatrixAt(count, _m.compose(_p, _q, _s))
       instanced.setColorAt(count, color)
+      halos.setMatrixAt(count, _m.compose(_p, _q, _glowScale.setScalar(glowSize)))
+      halos.setColorAt(count, glowColor)
       count += 1
     }
     instanced.count = count
+    halos.count = count
     instanced.instanceMatrix.needsUpdate = true
+    halos.instanceMatrix.needsUpdate = true
     if (instanced.instanceColor) instanced.instanceColor.needsUpdate = true
+    if (halos.instanceColor) halos.instanceColor.needsUpdate = true
 
     updatePopups(state.camera, size.width, size.height)
   })
 
-  return <primitive ref={meshRef} object={mesh} />
+  return (
+    <>
+      <primitive ref={glowRef} object={glow} />
+      <primitive ref={meshRef} object={mesh} />
+    </>
+  )
 }
 
 export default TrainingFX

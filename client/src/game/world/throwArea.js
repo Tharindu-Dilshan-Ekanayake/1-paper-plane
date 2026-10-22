@@ -1,6 +1,6 @@
 import { CanvasTexture, LinearMipmapLinearFilter, MeshBasicMaterial, PlaneGeometry, SRGBColorSpace } from 'three'
 
-import { THROW_AREA } from '@shared/world'
+import { STAGE, THROW_AREA } from '@shared/world'
 
 const FONT = '"Fredoka One", "Arial Rounded MT Bold", sans-serif'
 
@@ -45,5 +45,6 @@ export async function createThrowAreaDecal(maxTexture) {
   const w = THROW_AREA.maxX - THROW_AREA.minX
   const geometry = new PlaneGeometry(w, w * 0.22)
   geometry.rotateX(-Math.PI / 2)
-  return { geometry, material, texture, position: [0, 0.03, THROW_AREA.minZ + 2.4] }
+  // On the stage floor, centred on the pad.
+  return { geometry, material, texture, position: [0, STAGE.height + 0.07, (THROW_AREA.minZ + THROW_AREA.maxZ) / 2] }
 }

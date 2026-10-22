@@ -19,6 +19,8 @@ const queue = []
 const listeners = new Set()
 let renderer = null
 let rig = null
+let notifyScheduled = false
+const _previousClear = new Color()
 
 /** linear -> sRGB byte lookup: render targets come back in linear light. */
 const TO_SRGB = new Uint8Array(256)
@@ -47,7 +49,7 @@ function render(id) {
   rig ||= buildRig()
   rig.mesh.geometry = petGeometry(id)
   const previousTarget = renderer.getRenderTarget()
-  const previousClear = renderer.getClearColor(new Color())
+  const previousClear = renderer.getClearColor(_previousClear)
   const previousAlpha = renderer.getClearAlpha()
   renderer.setRenderTarget(rig.target)
   renderer.setClearColor(0x000000, 0)
@@ -89,7 +91,13 @@ export function attachIconRenderer(gl) {
 export function processIconQueue(max = 2) {
   if (!renderer || queue.length === 0) return
   for (let i = 0; i < max && queue.length; i += 1) render(queue.shift())
-  for (const fn of listeners) fn()
+  // Re-render the portraits' React components after the frame, not inside it.
+  if (notifyScheduled) return
+  notifyScheduled = true
+  setTimeout(() => {
+    notifyScheduled = false
+    for (const fn of listeners) fn()
+  }, 0)
 }
 
 function request(id) {

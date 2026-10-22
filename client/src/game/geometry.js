@@ -35,25 +35,8 @@ export function star(points, outer, inner, depth = 0.25) {
   return g
 }
 
-/**
- * The classic dart paper plane, nose along +Z, about 1 unit long. Two wings with a
- * slight dihedral and a folded keel underneath. Non-indexed, flat normals, and drawn
- * double-sided by its materials (it's paper).
- */
-export function createPaperPlaneGeometry() {
-  const nose = [0, 0, 0.5]
-  const tailTop = [0, 0.02, -0.5]
-  const keel = [0, -0.14, -0.42]
-  const leftTip = [-0.36, 0.09, -0.5]
-  const rightTip = [0.36, 0.09, -0.5]
-  const tris = [
-    // Wings.
-    [nose, leftTip, tailTop],
-    [nose, tailTop, rightTip],
-    // Keel fold, both sides.
-    [nose, tailTop, keel],
-    [nose, keel, tailTop],
-  ]
+/** Builds a non-indexed, flat-shaded geometry from a list of triangles. */
+function trianglesToGeometry(tris) {
   const positions = new Float32Array(tris.length * 9)
   tris.forEach((tri, i) => tri.forEach((v, k) => positions.set(v, i * 9 + k * 3)))
   const g = new BufferGeometry()
@@ -62,28 +45,51 @@ export function createPaperPlaneGeometry() {
   return g
 }
 
+// The dart's key points, nose along +Z, about 1 unit long.
+const NOSE = [0, 0, 0.55]
+const SPINE = [0, 0.03, -0.5]
+const KEEL = [0, -0.17, -0.44]
+/** Fold line on each wing, and the wing tips with their upturned winglets. */
+const fold = (side) => [side * 0.15, 0.05, -0.5]
+const tip = (side) => [side * 0.4, 0.11, -0.5]
+const tipFront = (side) => [side * 0.36, 0.1, -0.2]
+const winglet = (side) => [side * 0.43, 0.27, -0.5]
+
 /**
- * Coloured stripes over the outer part of each wing, drawn on top of the plane in its
- * trim colour, so planes differ by more than tint.
+ * The classic folded dart: each wing in two panels either side of a crease, upturned
+ * winglets at the tips, and the folded keel underneath. 8 triangles, drawn
+ * double-sided by its materials (it's paper).
+ */
+export function createPaperPlaneGeometry() {
+  const tris = []
+  for (const side of [-1, 1]) {
+    tris.push([NOSE, SPINE, fold(side)])
+    tris.push([NOSE, fold(side), tip(side)])
+    tris.push([tipFront(side), tip(side), winglet(side)])
+  }
+  tris.push([NOSE, SPINE, KEEL], [NOSE, KEEL, SPINE])
+  return trianglesToGeometry(tris)
+}
+
+/**
+ * Coloured stripes along the outer wing panels, drawn on top of the plane in its trim
+ * colour, so planes differ by more than tint.
  */
 export function createPlaneTrimGeometry() {
   const lerp = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t)
   const lift = (v) => [v[0], v[1] + 0.012, v[2]]
-  const nose = [0, 0, 0.5]
-  const tailTop = [0, 0.02, -0.5]
   const tris = []
-  for (const tip of [
-    [-0.36, 0.09, -0.5],
-    [0.36, 0.09, -0.5],
-  ]) {
-    tris.push([lift(lerp(nose, tip, 0.45)), lift(tip), lift(lerp(tip, tailTop, 0.3))])
+  for (const side of [-1, 1]) {
+    const a = lerp(NOSE, fold(side), 0.55)
+    const b = lerp(NOSE, tip(side), 0.55)
+    const c = lerp(NOSE, tip(side), 0.72)
+    const d = lerp(NOSE, fold(side), 0.72)
+    tris.push([lift(a), lift(b), lift(c)], [lift(a), lift(c), lift(d)])
+    // Winglets in the trim colour too, nudged outward off the near-vertical face.
+    const out = (v) => [v[0] + side * 0.012, v[1], v[2]]
+    tris.push([out(tipFront(side)), out(tip(side)), out(winglet(side))])
   }
-  const positions = new Float32Array(tris.length * 9)
-  tris.forEach((tri, i) => tri.forEach((v, k) => positions.set(v, i * 9 + k * 3)))
-  const g = new BufferGeometry()
-  g.setAttribute('position', new BufferAttribute(positions, 3))
-  g.computeVertexNormals()
-  return g
+  return trianglesToGeometry(tris)
 }
 
 /** Shared instances, for every paper plane in the game. */

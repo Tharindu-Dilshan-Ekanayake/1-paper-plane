@@ -7,62 +7,82 @@
  * Units are roughly metres - the avatar is 1.8 tall. +X is east, -Z is north, which is
  * "forward" from spawn and the direction planes are thrown.
  *
+ * Seen from spawn: the throw stage straight ahead (north), the training lanes along the
+ * left (west) side, the plane hangar on the right (east), eggs and leaderboards behind.
+ *
  * Rects are `{ minX, maxX, minZ, maxZ }` on the ground plane.
  */
 
-export const SPAWN = { x: 0, z: 12 }
+export const SPAWN = { x: 0, z: 14 }
 
-/** The flat, walkable plaza. Hills surround it on every side but the throw road. */
-export const PLAZA = { minX: -86, maxX: 62, minZ: -46, maxZ: 46 }
+/** The flat, walkable plaza. Hills surround it on every side but the throw track. */
+export const PLAZA = { minX: -50, maxX: 50, minZ: -40, maxZ: 36 }
+
+// --- Throw stage --------------------------------------------------------------------
+
+/**
+ * The raised stage players throw from. Its north edge is the end of the lobby: a
+ * railing stops players there, and the track starts on the other side.
+ */
+export const STAGE = { minX: -11, maxX: 11, minZ: -40, maxZ: -26, height: 1.2 }
+/** Steps up to the stage along its south edge. */
+export const STAGE_STEPS = 3
+export const STAGE_STEP_DEPTH = 1.2
 
 /** Track metre `m` is at world z = THROW_LINE_Z - m. */
-export const THROW_LINE_Z = -28
+export const THROW_LINE_Z = STAGE.minZ
 export const TRACK_HALF_WIDTH = 9
 
-/** Painted "THROW AREA": standing in it shows the THROW button. */
-export const THROW_AREA = { minX: -7.5, maxX: 7.5, minZ: -28, maxZ: -19 }
+/** Painted "THROW AREA" on the stage: standing in it shows the THROW button. */
+export const THROW_AREA = { minX: -7, maxX: 7, minZ: -37, maxZ: -29 }
 
-/** Walkable ground as a union of rects; the controller clamps the player into it. */
-export const WALKABLE = [PLAZA, { minX: -9, maxX: 9, minZ: -58, maxZ: -46 }]
+/** Walkable ground; the controller clamps the player into it. Nothing past the stage. */
+export const WALKABLE = [PLAZA]
 
 // --- Training lanes -----------------------------------------------------------------
 
+/**
+ * Lanes line the west side of the plaza, side by side. Each runs east-west: you walk in
+ * from the plaza (east end) and throw at the target board at the west end.
+ */
 export const LANE_COUNT = 9
-export const LANE_WIDTH = 6
-export const LANE_PITCH = 7.6
-/** Entrance edge (south) and target edge (north) of every lane floor. */
-export const LANE_NEAR_Z = -22
-export const LANE_FAR_Z = -40
+export const LANE_WIDTH = 5.6
+export const LANE_PITCH = 7
+/** Entrance edge (east) and target edge (west) of every lane floor. */
+export const LANE_NEAR_X = -24
+export const LANE_FAR_X = -42
 /** Where the target board stands, just past the far edge. */
-export const LANE_TARGET_Z = -42.4
+export const LANE_TARGET_X = -44.4
 export const LANE_FLOOR_HEIGHT = 0.15
+/** Lane 0 (the free one) is the southernmost, nearest spawn; the rest run north. */
+const LANE0_Z = 26
 
-export const laneCenterX = (index) => -17 - index * LANE_PITCH
+export const laneCenterZ = (index) => LANE0_Z - index * LANE_PITCH
 
 export function laneRect(index) {
-  const cx = laneCenterX(index)
+  const cz = laneCenterZ(index)
   return {
-    minX: cx - LANE_WIDTH / 2,
-    maxX: cx + LANE_WIDTH / 2,
-    minZ: LANE_FAR_Z,
-    maxZ: LANE_NEAR_Z,
+    minX: LANE_FAR_X,
+    maxX: LANE_NEAR_X,
+    minZ: cz - LANE_WIDTH / 2,
+    maxZ: cz + LANE_WIDTH / 2,
   }
 }
 
 // --- Plane hangar -------------------------------------------------------------------
 
 /** Open on its west side, facing the plaza. */
-export const HANGAR = { minX: 34, maxX: 58, minZ: -30, maxZ: 4, height: 11 }
+export const HANGAR = { minX: 26, maxX: 48, minZ: -26, maxZ: 8, height: 11 }
 /** Raised back tier holding planes 6-10. */
-export const HANGAR_STEP = { minX: 45, maxX: 57.5, minZ: -29.5, maxZ: 3.5, height: 1 }
+export const HANGAR_STEP = { minX: 37, maxX: 47.5, minZ: -25.5, maxZ: 7.5, height: 1 }
 export const PAD_SIZE = 4
 
 export const PLANE_PADS = Array.from({ length: 10 }, (_, i) => {
   const back = i >= 5
   return {
     index: i,
-    x: back ? 51 : 39.5,
-    z: -25 + (i % 5) * 6.5,
+    x: back ? 42.5 : 31.5,
+    z: -19 + (i % 5) * 6.2,
     y: back ? HANGAR_STEP.height : 0,
   }
 })
@@ -77,26 +97,26 @@ export const padRect = (pad) => ({
 // --- Eggs, showcases, boards --------------------------------------------------------
 
 export const EGG_STANDS = [
-  { eggId: 'basic', x: 12, z: 30 },
-  { eggId: 'meadow', x: 21, z: 30 },
-  { eggId: 'sunset', x: 30, z: 30 },
-  { eggId: 'unicorn', x: 39, z: 30 },
-  { eggId: 'demon', x: -12, z: -6, big: true },
+  { eggId: 'basic', x: 12, z: 22 },
+  { eggId: 'meadow', x: 20, z: 22 },
+  { eggId: 'sunset', x: 28, z: 22 },
+  { eggId: 'unicorn', x: 36, z: 22 },
+  { eggId: 'demon', x: -12, z: -14, big: true },
 ]
-export const EGG_TRIGGER_RADIUS = 4.4
+export const EGG_TRIGGER_RADIUS = 4.2
 
 /** Limited premium pet on display. */
-export const SPHINX_STAND = { x: 52, z: 31 }
+export const SPHINX_STAND = { x: 45, z: 21 }
 
 export const LEADERBOARDS = [
-  { id: 'rebirths', x: 14, z: 43.5 },
-  { id: 'playtime', x: 27, z: 43.5 },
-  { id: 'power', x: 40, z: 43.5 },
+  { id: 'rebirths', x: 12, z: 33.5 },
+  { id: 'playtime', x: 24, z: 33.5 },
+  { id: 'power', x: 36, z: 33.5 },
 ]
 
-export const PORTAL = { x: 22, z: -40, radius: 3.4 }
-export const FREE_REWARD = { x: 17, z: 6, radius: 3 }
-export const WATERFALL = { x: 44, z: -46 }
+export const PORTAL = { x: 24, z: -34, radius: 3.4 }
+export const FREE_REWARD = { x: 12, z: 10, radius: 3 }
+export const WATERFALL = { x: 38, z: -40 }
 
 // --- Collision ----------------------------------------------------------------------
 
@@ -121,13 +141,26 @@ export const STATIC_COLLIDERS = [
   // The portal ring's base; the swirl itself is walk-through.
   box(PORTAL.x - PORTAL.radius, PORTAL.z, 0.6, 0.8),
   box(PORTAL.x + PORTAL.radius, PORTAL.z, 0.6, 0.8),
+  // Stage pillars at its front corners, and the railing along its north edge.
+  box(STAGE.minX + 1, STAGE.minZ + 1, 0.9, 0.9),
+  box(STAGE.maxX - 1, STAGE.minZ + 1, 0.9, 0.9),
+  { minX: STAGE.minX, maxX: STAGE.maxX, minZ: STAGE.minZ - 1, maxZ: STAGE.minZ + 0.4 },
   // Target pedestals at the far end of each lane.
-  ...Array.from({ length: LANE_COUNT }, (_, i) => box(laneCenterX(i), LANE_TARGET_Z, 1.6, 0.9)),
+  ...Array.from({ length: LANE_COUNT }, (_, i) => box(LANE_TARGET_X, laneCenterZ(i), 0.9, 1.6)),
 ]
 
 /** Raised floors the player stands on, as rects with a height. */
 export const PLATFORMS = [
   { ...HANGAR_STEP },
+  { ...STAGE },
+  // Steps up the stage's south side, lowest first.
+  ...Array.from({ length: STAGE_STEPS }, (_, i) => ({
+    minX: STAGE.minX + 2,
+    maxX: STAGE.maxX - 2,
+    minZ: STAGE.maxZ,
+    maxZ: STAGE.maxZ + (STAGE_STEPS - i) * STAGE_STEP_DEPTH,
+    height: (STAGE.height * (i + 1)) / (STAGE_STEPS + 1),
+  })),
   ...Array.from({ length: LANE_COUNT }, (_, i) => ({ ...laneRect(i), height: LANE_FLOOR_HEIGHT })),
 ]
 

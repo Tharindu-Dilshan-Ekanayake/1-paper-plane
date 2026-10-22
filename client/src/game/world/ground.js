@@ -9,18 +9,20 @@ import {
 } from 'three'
 
 import {
+  EGG_STANDS,
   FREE_REWARD,
   HANGAR,
-  LANE_FAR_Z,
-  laneCenterX,
   LANE_COUNT,
-  LANE_NEAR_Z,
+  LANE_NEAR_X,
+  LANE_TARGET_X,
   LANE_WIDTH,
+  laneCenterZ,
+  LEADERBOARDS,
   PLAZA,
   PORTAL,
-  THROW_AREA,
+  STAGE,
   THROW_LINE_Z,
-  TRACK_HALF_WIDTH,
+  WATERFALL,
 } from '@shared/world'
 
 import { PALETTE } from '../sceneStyle'
@@ -32,12 +34,12 @@ import { PALETTE } from '../sceneStyle'
  * single draw call regardless of how many painted regions it has.
  */
 
-const MAP = { minX: -100, maxX: 80, minZ: -60, maxZ: 60 }
+const MAP = { minX: -64, maxX: 64, minZ: -44, maxZ: 48 }
 const MAP_W = MAP.maxX - MAP.minX
 const MAP_H = MAP.maxZ - MAP.minZ
 
 /** Where the ground plane ends to the north: the track's own floor takes over there. */
-export const GROUND_NORTH_EDGE = -58
+export const GROUND_NORTH_EDGE = THROW_LINE_Z
 
 function painter(ctx) {
   const rect = (r, color) => {
@@ -75,46 +77,39 @@ export function createGroundMap(maxTexture) {
 
   rect(MAP, PALETTE.plaza)
 
-  // Lane apron, behind the lane floors.
-  const lanesMinX = laneCenterX(LANE_COUNT - 1) - LANE_WIDTH / 2 - 3
-  const lanesMaxX = laneCenterX(0) + LANE_WIDTH / 2 + 3
-  bordered(
-    { minX: lanesMinX, maxX: lanesMaxX, minZ: PLAZA.minZ, maxZ: LANE_NEAR_Z + 3 },
-    PALETTE.apron,
-    PALETTE.apronEdge,
-  )
+  // Lane apron along the west side, behind the lane floors.
+  const lanesMinZ = laneCenterZ(LANE_COUNT - 1) - LANE_WIDTH / 2 - 2
+  const lanesMaxZ = laneCenterZ(0) + LANE_WIDTH / 2 + 2
+  bordered({ minX: LANE_TARGET_X - 3, maxX: LANE_NEAR_X + 3, minZ: lanesMinZ, maxZ: lanesMaxZ }, PALETTE.apron, PALETTE.apronEdge)
 
-  // Paths: spawn square, north to the throw area, west along the lanes, east to the
-  // hangar, south-east to the eggs, and a spur to the portal.
+  // Paths: a walkway along the lane entrances, spawn to the stage steps, spawn to the
+  // lanes, the hangar, the eggs, and a spur up to the portal.
+  const eggsZ = EGG_STANDS[0].z
   const paths = [
-    { minX: -5, maxX: 5, minZ: THROW_AREA.maxZ, maxZ: 18 },
-    { minX: lanesMinX, maxX: -4, minZ: LANE_NEAR_Z + 3, maxZ: LANE_NEAR_Z + 8 },
-    { minX: 4, maxX: HANGAR.minX + 1, minZ: -15, maxZ: -9 },
-    { minX: 7, maxX: 56, minZ: 12, maxZ: 17 },
-    { minX: 19, maxX: 25, minZ: PORTAL.z + 3, maxZ: -14 },
+    { minX: LANE_NEAR_X + 3, maxX: LANE_NEAR_X + 8, minZ: lanesMinZ, maxZ: lanesMaxZ },
+    { minX: -5, maxX: 5, minZ: STAGE.maxZ, maxZ: 16 },
+    { minX: LANE_NEAR_X + 3, maxX: -5, minZ: 11, maxZ: 17 },
+    { minX: 5, maxX: HANGAR.minX + 1, minZ: -12, maxZ: -6 },
+    { minX: 5, maxX: 46, minZ: eggsZ - 8, maxZ: eggsZ - 4 },
+    { minX: PORTAL.x - 3, maxX: PORTAL.x + 3, minZ: PORTAL.z + 3, maxZ: -12 },
   ]
   for (const p of paths) bordered(p, PALETTE.path, PALETTE.pathEdge)
   // Paths overlap; repaint the interiors so crossings don't show edges.
   for (const p of paths) {
     rect({ minX: p.minX + 1, maxX: p.maxX - 1, minZ: p.minZ + 1, maxZ: p.maxZ - 1 }, PALETTE.path)
   }
-  bordered({ minX: -9, maxX: 9, minZ: 5, maxZ: 21 }, PALETTE.path, PALETTE.pathEdge)
+  bordered({ minX: -9, maxX: 9, minZ: 7, maxZ: 21 }, PALETTE.path, PALETTE.pathEdge)
 
   // Egg plaza and the hangar floor.
-  bordered({ minX: 6, maxX: 59, minZ: 22, maxZ: 40 }, PALETTE.apron, PALETTE.apronEdge)
+  bordered({ minX: 6, maxX: PLAZA.maxX - 1, minZ: eggsZ - 4, maxZ: LEADERBOARDS[0].z - 1 }, PALETTE.apron, PALETTE.apronEdge)
   rect({ minX: HANGAR.minX, maxX: HANGAR.maxX, minZ: HANGAR.minZ, maxZ: HANGAR.maxZ }, PALETTE.hangarFloor)
 
   disc(PORTAL.x, PORTAL.z, 6, PALETTE.apronEdge)
   disc(PORTAL.x, PORTAL.z, 5, PALETTE.apron)
   disc(FREE_REWARD.x, FREE_REWARD.z, 4, PALETTE.apronEdge)
 
-  // The throw area, then the first stretch of lawn and pavement down the track.
-  bordered(THROW_AREA, PALETTE.path, PALETTE.pathEdge)
-  rect({ minX: -TRACK_HALF_WIDTH, maxX: TRACK_HALF_WIDTH, minZ: MAP.minZ, maxZ: THROW_LINE_Z }, PALETTE.sidewalk)
-  rect({ minX: -TRACK_HALF_WIDTH + 2, maxX: TRACK_HALF_WIDTH - 2, minZ: MAP.minZ, maxZ: THROW_LINE_Z }, PALETTE.lawn)
-
   // Waterfall pool at the foot of the north cliff.
-  rect({ minX: 38, maxX: 50, minZ: LANE_FAR_Z - 6, maxZ: LANE_FAR_Z - 1 }, PALETTE.water)
+  rect({ minX: WATERFALL.x - 6, maxX: WATERFALL.x + 6, minZ: WATERFALL.z, maxZ: WATERFALL.z + 5 }, PALETTE.water)
 
   const texture = new CanvasTexture(canvas)
   texture.colorSpace = SRGBColorSpace

@@ -136,6 +136,8 @@ const _e = new Euler()
 export class PropBuilder {
   constructor() {
     this.parts = []
+    /** Optional Matrix4 applied to every part added while it is set. */
+    this.transform = null
   }
 
   /**
@@ -156,6 +158,7 @@ export class PropBuilder {
     else _s.setScalar(scale)
     _m.compose(_p, _q, _s)
     g.applyMatrix4(_m)
+    if (this.transform) g.applyMatrix4(this.transform)
 
     const n = g.getAttribute('position').count
     const c = toColor(color)

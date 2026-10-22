@@ -10,7 +10,7 @@ import { updateWorldLabel } from '../labels/registry'
 import { createToyMaterial, sharedMaterials } from '../materials'
 import { runtime } from '../runtime'
 import { attachIconRenderer, processIconQueue } from './petIcons'
-import { petGeometry } from './petModels'
+import { PET_IDS, petGeometry } from './petModels'
 
 /** Instances per species: your three plus seven other players' worth. */
 const PER_SPECIES = 24
@@ -46,9 +46,20 @@ const followers = SLOTS.map(() => ({ position: new Vector3(), yaw: 0, size: 0.85
 export function Pets() {
   const gl = useThree((s) => s.gl)
   const groupRef = useRef(null)
-  const species = useRef(new Map())
-
   const material = useMemo(() => createToyMaterial({ instanced: true, vertexColors: true }), [])
+  /** One InstancedMesh per species, all made up front so the frame loop never allocates. */
+  const species = useMemo(() => {
+    const map = new Map()
+    for (const id of PET_IDS) {
+      const mesh = new InstancedMesh(petGeometry(id), material, PER_SPECIES)
+      mesh.count = 0
+      mesh.visible = false
+      mesh.frustumCulled = false
+      mesh.castShadow = true
+      map.set(id, mesh)
+    }
+    return map
+  }, [material])
 
   useEffect(() => {
     for (const f of followers) runtime.shadowCasters.add(f)
@@ -61,18 +72,13 @@ export function Pets() {
     attachIconRenderer(gl)
   }, [gl])
 
-  useEffect(() => {
-    const group = groupRef.current
-    const meshes = species.current
-    return () => {
-      for (const mesh of meshes.values()) {
-        group?.remove(mesh)
-        mesh.dispose()
-      }
-      meshes.clear()
+  useEffect(
+    () => () => {
+      for (const mesh of species.values()) mesh.dispose()
       material.dispose()
-    }
-  }, [material])
+    },
+    [species, material],
+  )
 
   useFrame((state, rawDelta) => {
     processIconQueue(2)
@@ -81,22 +87,11 @@ export function Pets() {
     const delta = Math.min(rawDelta, 0.05)
     const t = state.clock.elapsedTime
 
-    const meshFor = (id) => {
-      let mesh = species.current.get(id)
-      if (!mesh) {
-        mesh = new InstancedMesh(petGeometry(id), material, PER_SPECIES)
-        mesh.frustumCulled = false
-        mesh.castShadow = true
-        species.current.set(id, mesh)
-        group.add(mesh)
-      }
-      return mesh
-    }
-    for (const mesh of species.current.values()) mesh.count = 0
+    for (const mesh of species.values()) mesh.count = 0
 
     const place = (id, position, yaw, hop) => {
-      const mesh = meshFor(id)
-      if (mesh.count >= PER_SPECIES) return
+      const mesh = species.get(id)
+      if (!mesh || mesh.count >= PER_SPECIES) return
       _p.copy(position)
       _p.y += hop
       _q.setFromAxisAngle(_up, yaw)
@@ -145,13 +140,19 @@ export function Pets() {
     // --- Other players' pets ------------------------------------------------------
     for (const remote of runtime.remotePets) place(remote.id, remote.position, remote.yaw, remote.hop || 0)
 
-    for (const mesh of species.current.values()) {
+    for (const mesh of species.values()) {
       mesh.visible = mesh.count > 0
       if (mesh.count > 0) mesh.instanceMatrix.needsUpdate = true
     }
   })
 
-  return <group ref={groupRef} />
+  return (
+    <group ref={groupRef}>
+      {[...species.values()].map((mesh) => (
+        <primitive key={mesh.uuid} object={mesh} />
+      ))}
+    </group>
+  )
 }
 
 /** The limited Sphinx, big and slowly turning on its showcase plinth. */

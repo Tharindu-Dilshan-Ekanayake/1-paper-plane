@@ -1,0 +1,75 @@
+import { STAGE, STAGE_STEP_DEPTH, STAGE_STEPS, THROW_AREA } from '@shared/world'
+
+import { STYLE } from '../materials'
+
+const WHITE = '#f4f7fb'
+const BLUE = '#2f7fe6'
+const NAVY = '#1f3c96'
+const SKY = '#7fe2ff'
+const GOLD = '#ffd21f'
+
+/**
+ * The throw stage: a raised white-and-blue platform at the north end of the lobby with
+ * steps up its south side, the painted throw pad, light strips, flags, and a launch
+ * arch over its front edge that the planes fly out through. A railing along the front
+ * marks the end of the lobby.
+ *
+ * All plain blocks, so the whole stage rides in the world's single block draw call.
+ */
+export function buildStage(blocks) {
+  const { minX, maxX, minZ, maxZ, height } = STAGE
+  const width = maxX - minX
+  const depth = maxZ - minZ
+  const midZ = (minZ + maxZ) / 2
+
+  // Body, with a blue band around its sides.
+  blocks.addOn(0, -0.1, midZ, width, height + 0.1, depth, WHITE)
+  blocks.addOn(0, 0.15, midZ, width + 0.3, height * 0.45, depth + 0.3, BLUE)
+  // Glowing strips along the top edges.
+  for (const side of [-1, 1]) {
+    blocks.addOn(side * (width / 2 - 0.25), height, midZ, 0.35, 0.08, depth - 0.6, SKY, STYLE.GLOW)
+  }
+
+  // The throw pad: orange border, yellow fill (the "THROW AREA" decal sits on top).
+  const padX = (THROW_AREA.minX + THROW_AREA.maxX) / 2
+  const padZ = (THROW_AREA.minZ + THROW_AREA.maxZ) / 2
+  const padW = THROW_AREA.maxX - THROW_AREA.minX
+  const padD = THROW_AREA.maxZ - THROW_AREA.minZ
+  blocks.addOn(padX, height - 0.02, padZ, padW + 0.8, 0.05, padD + 0.8, '#ff9a1f')
+  blocks.addOn(padX, height - 0.01, padZ, padW, 0.05, padD, '#ffd54a')
+
+  // Steps up the south side, lowest (and deepest) first, matching the walkable steps.
+  for (let i = 0; i < STAGE_STEPS; i += 1) {
+    const stepDepth = (STAGE_STEPS - i) * STAGE_STEP_DEPTH
+    const stepHeight = (height * (i + 1)) / (STAGE_STEPS + 1)
+    blocks.addOn(0, -0.1, maxZ + stepDepth / 2, width - 4, stepHeight + 0.1, stepDepth, i % 2 ? '#dbe8f6' : WHITE)
+    blocks.addOn(0, stepHeight - 0.02, maxZ + stepDepth - 0.15, width - 4, 0.06, 0.3, SKY, STYLE.GLOW)
+  }
+
+  // Front railing: posts and a glowing rail. The plane flies over it.
+  const railZ = minZ + 0.25
+  for (let x = minX + 0.5; x <= maxX - 0.4; x += 2) blocks.addOn(x, height, railZ, 0.25, 1, 0.25, WHITE)
+  blocks.addOn(0, height + 0.9, railZ, width - 0.4, 0.22, 0.3, SKY, STYLE.GLOW)
+  blocks.addOn(0, height + 0.4, railZ, width - 0.4, 0.12, 0.2, WHITE)
+
+  // Launch arch over the front: striped pillars on the corners, a beam across the top
+  // carrying the THROW! sign, and a glowing orb on each pillar.
+  const archTop = height + 9
+  for (const side of [-1, 1]) {
+    const x = side * (width / 2 - 1)
+    blocks.addOn(x, height, minZ + 1, 1.8, 0.6, 1.8, NAVY)
+    blocks.addOn(x, height + 0.6, minZ + 1, 1.4, archTop - height - 0.6, 1.4, BLUE, STYLE.STRIPES)
+    blocks.addOn(x, archTop + 1.2, minZ + 1, 1.9, 1.9, 1.9, GOLD, STYLE.GLOW)
+  }
+  blocks.addOn(0, archTop - 0.2, minZ + 1, width - 1, 1.4, 1.2, BLUE, STYLE.STRIPES)
+  blocks.addOn(0, archTop - 0.45, minZ + 1, width - 2.6, 0.25, 1.3, SKY, STYLE.GLOW)
+
+  // Flags on the back corners.
+  const flags = ['#ff3b5c', '#2fc6ff']
+  ;[-1, 1].forEach((side, i) => {
+    const x = side * (width / 2 - 0.6)
+    blocks.addOn(x, height, maxZ - 0.6, 0.22, 6.5, 0.22, WHITE)
+    blocks.addOn(x - side * 1.1, height + 5.3, maxZ - 0.6, 2, 1.2, 0.12, flags[i], STYLE.SMOOTH)
+    blocks.addOn(x, height + 6.5, maxZ - 0.6, 0.4, 0.4, 0.4, GOLD, STYLE.GLOW)
+  })
+}

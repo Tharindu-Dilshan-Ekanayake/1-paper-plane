@@ -12,12 +12,13 @@ import { addTree } from '../world/terrain'
  * draw call); content is seeded by chunk index, so every client builds an identical
  * track and a chunk can be thrown away and rebuilt at will.
  *
- * Metre `m` sits at world z = THROW_LINE_Z - m. The first 30 m are lobby ground.
+ * Metre `m` sits at world z = THROW_LINE_Z - m: the front edge of the throw stage,
+ * where the lobby's ground ends and the track's begins.
  */
 
 export const CHUNK = 60
 /** Where the lobby's own ground plane stops and track ground takes over. */
-const LOBBY_GROUND_END = 30
+const LOBBY_GROUND_END = 0
 /** No side scenery this close to the plaza (lanes, portal and hills live there). */
 const DECOR_START = 20
 

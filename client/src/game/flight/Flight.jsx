@@ -7,11 +7,9 @@ import {
   BufferGeometry,
   Color,
   CylinderGeometry,
-  DoubleSide,
   InstancedMesh,
   Matrix4,
   MeshBasicMaterial,
-  MeshLambertMaterial,
   Points,
   PointsMaterial,
   Quaternion,
@@ -31,10 +29,9 @@ import { getQuality, useQuality } from '../../store/quality'
 import { iconUrl } from '../../ui/icons'
 import { disposeBlocks, PropBuilder } from '../blocks'
 import { spawnPopup } from '../fx/popups'
-import { PAPER_PLANE } from '../geometry'
+import { createPlaneModel } from '../planeModel'
 import { LabelBatch } from '../labels/LabelBatch'
 import { createToyMaterial, sharedMaterials, STYLE } from '../materials'
-import { planeColor } from '../planes'
 import { runtime } from '../runtime'
 import { FOG, SKY } from '../sceneStyle'
 import { skyUniforms } from '../skyState'
@@ -42,9 +39,11 @@ import { flight } from './flightControl'
 import { writeDistance } from './hudLink'
 import { buildChunk, CHUNK, GATES, ZONE_THEMES, zAt } from './track'
 
-/** Chunks kept behind the focus point, and how many may be built per frame. */
+/** Chunks kept behind the focus point, and how many may be built per builder pass. */
 const BEHIND = 60
 const MAX_BUILDS_PER_FRAME = 2
+/** How often the chunk builder runs (between frames, not inside them). */
+const BUILD_INTERVAL_MS = 30
 /** Chunks never thrown away: the stretch visible from the lobby. */
 const PINNED_CHUNKS = 3
 const CACHE_LIMIT = 14
@@ -65,6 +64,17 @@ const _prevPlane = new Vector3()
 const planeFocus = new Vector3()
 const _skyTop = new Color()
 const _skyHorizon = new Color()
+
+/** Built chunks by index. Module-level: one track exists at a time. */
+const chunkCache = new Map()
+/** The chunk window the frame loop wants; the builder makes it so. */
+const trackWindow = { first: 0, last: 0, density: 1, shadows: false }
+
+/** Speed-line streaks, made once. */
+const streakState = (() => {
+  const r = mulberry32(5)
+  return Array.from({ length: STREAKS }, () => ({ a: r() * Math.PI * 2, r: 1.6 + r() * 3.2, z: -r() * 30 }))
+})()
 
 const ZONE_SKIES = ZONES.map((z) => ZONE_THEMES[z.id].sky.map((c) => new Color(c)))
 const DEFAULT_TOP = new Color(SKY.top)
@@ -114,12 +124,10 @@ export default function Flight() {
   const trophyRef = useRef(null)
   const streakRef = useRef(null)
   const starsRef = useRef(null)
-  const cache = useRef(new Map())
   const flightStart = useRef(new Vector3())
   const startedFor = useRef(0)
   const collected = useRef(new Set())
   const wasActive = useRef(false)
-  const streaks = useRef(null)
   const gatesRef = useRef(null)
   const speedLines = useQuality((s) => s.settings.speedLines)
   const particles = useQuality((s) => s.settings.particles)
@@ -130,7 +138,9 @@ export default function Flight() {
     trophies.count = 0
     trophies.frustumCulled = false
 
-    const planeMaterial = new MeshLambertMaterial({ side: DoubleSide, flatShading: true })
+    const planeModel = createPlaneModel({ glowSize: 2 })
+    planeModel.scale.setScalar(2.2)
+    planeModel.visible = false
 
     const streakMaterial = new MeshBasicMaterial({
       color: '#ffffff',
@@ -156,7 +166,7 @@ export default function Flight() {
     stars.frustumCulled = false
     stars.visible = false
 
-    return { trophies, trophyMaterial, planeMaterial, streakMesh, streakMaterial, stars }
+    return { trophies, trophyMaterial, planeModel, streakMesh, streakMaterial, stars }
   }, [])
 
   // Zone names over the gate arches: their own small label batch.
@@ -176,15 +186,39 @@ export default function Flight() {
     }
   }, [])
 
+  // Streams track chunks in and out between frames: at most two builds per pass.
   useEffect(() => {
     const group = groupRef.current
+    const id = setInterval(() => {
+      if (!group) return
+      const want = trackWindow
+      let built = 0
+      for (let i = want.first; i <= want.last && built < MAX_BUILDS_PER_FRAME; i += 1) {
+        if (chunkCache.has(i)) continue
+        const mesh = buildChunk(i, { density: want.density }).build(sharedMaterials().blocks)
+        mesh.receiveShadow = want.shadows
+        mesh.visible = true
+        chunkCache.set(i, mesh)
+        group.add(mesh)
+        built += 1
+      }
+      if (chunkCache.size <= CACHE_LIMIT) return
+      for (const [i, mesh] of chunkCache) {
+        if ((i < want.first || i > want.last) && i >= PINNED_CHUNKS) {
+          group.remove(mesh)
+          disposeBlocks(mesh)
+          chunkCache.delete(i)
+        }
+      }
+    }, BUILD_INTERVAL_MS)
     return () => {
-      // The chunk meshes are exactly the track group's children.
-      for (const mesh of [...(group?.children ?? [])]) disposeBlocks(mesh)
+      clearInterval(id)
+      for (const mesh of chunkCache.values()) disposeBlocks(mesh)
+      chunkCache.clear()
       assets.trophies.geometry.dispose()
       assets.trophyMaterial.dispose()
       assets.trophies.dispose()
-      assets.planeMaterial.dispose()
+      assets.planeModel.dispose()
       assets.streakMesh.geometry.dispose()
       assets.streakMaterial.dispose()
       assets.streakMesh.dispose()
@@ -228,7 +262,8 @@ export default function Flight() {
         plane.position.copy(_p)
         plane.quaternion.copy(_q)
         plane.rotateZ(Math.sin(now * 0.004) * 0.25 * (1 - t))
-        plane.material.color.copy(planeColor(getGame().profile.equippedPlane))
+        plane.setPlane(getGame().profile.equippedPlane)
+        plane.setGlowSize(2 * settings.planeGlow)
       }
       runtime.flightFocus = planeFocus.copy(_p)
       writeDistance(flight.meter)
@@ -257,30 +292,16 @@ export default function Flight() {
     wasActive.current = flight.active
 
     // --- Track chunks -------------------------------------------------------------
+    // Only decide what should exist; the builder below does the allocating, outside
+    // the frame loop.
     const ahead = settings.viewDistance
-    const first = Math.max(0, Math.floor((focus - BEHIND) / CHUNK))
-    const last = Math.floor((focus + ahead) / CHUNK)
-    const chunks = cache.current
+    const want = trackWindow
+    want.first = Math.max(0, Math.floor((focus - BEHIND) / CHUNK))
+    want.last = Math.floor((focus + ahead) / CHUNK)
     // Fewer props when screaming past at hundreds of metres a second.
-    const density = settings.decorDensity * (speed > 300 ? 0.35 : speed > 120 ? 0.65 : 1)
-    let built = 0
-    for (let i = first; i <= last && built < MAX_BUILDS_PER_FRAME; i += 1) {
-      if (chunks.has(i)) continue
-      const mesh = buildChunk(i, { density }).build(sharedMaterials().blocks)
-      mesh.receiveShadow = settings.shadows === 'realtime'
-      chunks.set(i, mesh)
-      group.add(mesh)
-      built += 1
-    }
-    for (const [i, mesh] of chunks) {
-      const inWindow = i >= first && i <= last
-      mesh.visible = inWindow
-      if (!inWindow && i >= PINNED_CHUNKS && chunks.size > CACHE_LIMIT) {
-        group.remove(mesh)
-        disposeBlocks(mesh)
-        chunks.delete(i)
-      }
-    }
+    want.density = settings.decorDensity * (speed > 300 ? 0.35 : speed > 120 ? 0.65 : 1)
+    want.shadows = settings.shadows === 'realtime'
+    for (const [i, mesh] of chunkCache) mesh.visible = i >= want.first && i <= want.last
 
     // --- Trophies -----------------------------------------------------------------
     if (flight.active) {
@@ -343,14 +364,10 @@ export default function Flight() {
       if (!active) {
         lines.count = 0
       } else {
-        if (!streaks.current) {
-          const r = mulberry32(5)
-          streaks.current = Array.from({ length: STREAKS }, () => ({ a: r() * Math.PI * 2, r: 1.6 + r() * 3.2, z: -r() * 30 }))
-        }
         const travel = Math.min(speed, 400) * delta * 0.6
         lines.count = STREAKS
         for (let i = 0; i < STREAKS; i += 1) {
-          const st = streaks.current[i]
+          const st = streakState[i]
           st.z += travel
           if (st.z > 4) st.z -= 34
           _v.set(Math.cos(st.a) * st.r, Math.sin(st.a) * st.r * 0.7, st.z - 4)
@@ -368,7 +385,7 @@ export default function Flight() {
     <group>
       <group ref={groupRef} />
       <group ref={gatesRef} />
-      <mesh ref={planeRef} geometry={PAPER_PLANE} material={assets.planeMaterial} scale={2} visible={false} castShadow />
+      <primitive ref={planeRef} object={assets.planeModel} />
       <primitive ref={trophyRef} object={assets.trophies} />
       <primitive ref={streakRef} object={assets.streakMesh} />
       <primitive ref={starsRef} object={assets.stars} />

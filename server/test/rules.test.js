@@ -15,7 +15,7 @@ import {
   throwDistance,
 } from '../../shared/logic.js'
 import { PlayerSession } from '../../shared/session.js'
-import { laneCenterX, PLANE_PADS } from '../../shared/world.js'
+import { LANE_FAR_X, LANE_NEAR_X, laneCenterZ, PLANE_PADS } from '../../shared/world.js'
 
 test('numbers format like the HUD', () => {
   assert.deepEqual(
@@ -107,7 +107,7 @@ test('the session only trains where the player really stands', () => {
   s.handle('enterLane', { lane: 0 }, 0)
   s.tick(2, 0)
   assert.equal(s.profile.power, 0, 'claimed a lane from spawn')
-  Object.assign(pos, { x: laneCenterX(0), z: -30 })
+  Object.assign(pos, { x: (LANE_NEAR_X + LANE_FAR_X) / 2, z: laneCenterZ(0) })
   s.tick(2, 0)
   assert.ok(s.profile.power > 0)
 })

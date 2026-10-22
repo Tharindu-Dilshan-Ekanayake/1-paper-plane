@@ -17,7 +17,8 @@ import { THROW_LINE_Z } from '@shared/world'
 import { remotePlayers } from '../../net/remotePlayers'
 import { getQuality } from '../../store/quality'
 import { PAPER_PLANE } from '../geometry'
-import { planeColor } from '../planes'
+import { createGlowInstances, disposeGlow } from '../glow'
+import { planeColor, planeGlow } from '../planes'
 import { runtime } from '../runtime'
 import { hideNameplatesFrom, NAMEPLATE_POOL_SIZE, placeNameplate } from './nameplates'
 
@@ -100,6 +101,7 @@ export function RemotePlayers() {
   const size = useThree((s) => s.size)
   const bodyRef = useRef(null)
   const ghostRef = useRef(null)
+  const ghostGlowRef = useRef(null)
 
   const assets = useMemo(() => {
     const body = new InstancedMesh(new BoxGeometry(1, 1, 1), new MeshLambertMaterial(), MAX_REMOTES * PARTS)
@@ -112,7 +114,7 @@ export function RemotePlayers() {
     ghosts.setColorAt(0, _color.set('#ffffff'))
     ghosts.count = 0
     ghosts.frustumCulled = false
-    return { body, ghosts }
+    return { body, ghosts, ghostGlows: createGlowInstances(MAX_GHOSTS, 0.6) }
   }, [])
 
   useEffect(
@@ -122,6 +124,7 @@ export function RemotePlayers() {
       assets.body.dispose()
       assets.ghosts.material.dispose()
       assets.ghosts.dispose()
+      disposeGlow(assets.ghostGlows)
       hideNameplatesFrom(0)
     },
     [assets],
@@ -130,7 +133,8 @@ export function RemotePlayers() {
   useFrame((state, rawDelta) => {
     const body = bodyRef.current
     const ghosts = ghostRef.current
-    if (!body || !ghosts) return
+    const ghostGlows = ghostGlowRef.current
+    if (!body || !ghosts || !ghostGlows) return
     const delta = Math.min(rawDelta, 0.05)
     const settings = getQuality()
     const now = performance.now()
@@ -237,17 +241,23 @@ export function RemotePlayers() {
       _q.setFromUnitVectors(_forward, _dir)
       ghosts.setMatrixAt(g, _m.compose(_p, _q, _s.set(2.2, 2.2, 2.2)))
       ghosts.setColorAt(g, planeColor(throwInfo.planeId))
+      ghostGlows.setMatrixAt(g, _m.compose(_p, _q, _s.setScalar(3.2 * settings.planeGlow)))
+      ghostGlows.setColorAt(g, planeGlow(throwInfo.planeId))
       g += 1
     }
     ghosts.count = g
+    ghostGlows.count = g
     ghosts.instanceMatrix.needsUpdate = true
+    ghostGlows.instanceMatrix.needsUpdate = true
     if (ghosts.instanceColor) ghosts.instanceColor.needsUpdate = true
+    if (ghostGlows.instanceColor) ghostGlows.instanceColor.needsUpdate = true
   })
 
   return (
     <>
       <primitive ref={bodyRef} object={assets.body} />
       <primitive ref={ghostRef} object={assets.ghosts} />
+      <primitive ref={ghostGlowRef} object={assets.ghostGlows} />
     </>
   )
 }

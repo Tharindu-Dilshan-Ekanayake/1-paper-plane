@@ -2,12 +2,12 @@ import {
   HANGAR,
   HANGAR_STEP,
   LANE_COUNT,
-  LANE_FAR_Z,
+  LANE_FAR_X,
   LANE_FLOOR_HEIGHT,
-  LANE_NEAR_Z,
-  LANE_TARGET_Z,
+  LANE_NEAR_X,
+  LANE_TARGET_X,
   LANE_WIDTH,
-  laneCenterX,
+  laneCenterZ,
 } from '@shared/world'
 
 import { STYLE } from '../materials'
@@ -33,28 +33,29 @@ export const LANE_THEMES = [
 
 const EDGE = 0.6
 
+/** Lane floors with raised rims, and the target pedestals at their west ends. */
 export function buildLanes(blocks) {
-  const length = LANE_NEAR_Z - LANE_FAR_Z
-  const midZ = (LANE_NEAR_Z + LANE_FAR_Z) / 2
+  const length = LANE_NEAR_X - LANE_FAR_X
+  const midX = (LANE_NEAR_X + LANE_FAR_X) / 2
 
   for (let i = 0; i < LANE_COUNT; i += 1) {
     const theme = LANE_THEMES[i]
-    const cx = laneCenterX(i)
+    const cz = laneCenterZ(i)
     const h = LANE_FLOOR_HEIGHT
 
-    blocks.addOn(cx, -0.1, midZ, LANE_WIDTH - EDGE * 2, h + 0.1, length - EDGE * 2, theme.floor, theme.style)
+    blocks.addOn(midX, -0.1, cz, length - EDGE * 2, h + 0.1, LANE_WIDTH - EDGE * 2, theme.floor, theme.style)
 
     // Raised rim on all four sides.
     const rimH = h + 0.15
     const rimStyle = theme.style === STYLE.RAINBOW ? STYLE.RAINBOW : STYLE.STUDS
-    blocks.addOn(cx - LANE_WIDTH / 2 + EDGE / 2, -0.1, midZ, EDGE, rimH, length, theme.edge, rimStyle)
-    blocks.addOn(cx + LANE_WIDTH / 2 - EDGE / 2, -0.1, midZ, EDGE, rimH, length, theme.edge, rimStyle)
-    blocks.addOn(cx, -0.1, LANE_NEAR_Z - EDGE / 2, LANE_WIDTH - EDGE * 2, rimH, EDGE, theme.edge, rimStyle)
-    blocks.addOn(cx, -0.1, LANE_FAR_Z + EDGE / 2, LANE_WIDTH - EDGE * 2, rimH, EDGE, theme.edge, rimStyle)
+    blocks.addOn(midX, -0.1, cz - LANE_WIDTH / 2 + EDGE / 2, length, rimH, EDGE, theme.edge, rimStyle)
+    blocks.addOn(midX, -0.1, cz + LANE_WIDTH / 2 - EDGE / 2, length, rimH, EDGE, theme.edge, rimStyle)
+    blocks.addOn(LANE_NEAR_X - EDGE / 2, -0.1, cz, EDGE, rimH, LANE_WIDTH - EDGE * 2, theme.edge, rimStyle)
+    blocks.addOn(LANE_FAR_X + EDGE / 2, -0.1, cz, EDGE, rimH, LANE_WIDTH - EDGE * 2, theme.edge, rimStyle)
 
     // Target pedestal; the board itself is a prop.
-    blocks.addOn(cx, 0, LANE_TARGET_Z, 3.2, 0.8, 1.8, theme.edge, rimStyle)
-    blocks.addOn(cx, 0.8, LANE_TARGET_Z, 2.4, 0.4, 1.2, theme.floor, theme.style === STYLE.PLATE ? STYLE.STUDS : theme.style)
+    blocks.addOn(LANE_TARGET_X, 0, cz, 1.8, 0.8, 3.2, theme.edge, rimStyle)
+    blocks.addOn(LANE_TARGET_X, 0.8, cz, 1.2, 0.4, 2.4, theme.floor, theme.style === STYLE.PLATE ? STYLE.STUDS : theme.style)
   }
 }
 

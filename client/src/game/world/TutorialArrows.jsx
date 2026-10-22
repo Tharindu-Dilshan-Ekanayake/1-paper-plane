@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { InstancedMesh, Matrix4, Quaternion, Vector3 } from 'three'
 
 import { TUTORIAL } from '@shared/balance'
-import { EGG_STANDS, LANE_NEAR_Z, laneCenterX, PLANE_PADS, THROW_AREA } from '@shared/world'
+import { EGG_STANDS, groundHeightAt, LANE_NEAR_X, laneCenterZ, PLANE_PADS, THROW_AREA } from '@shared/world'
 
 import { getGame } from '../../store/game'
 import { PropBuilder } from '../blocks'
@@ -18,7 +18,7 @@ const ARRIVED = 3.5
 /** Ground point each tutorial step leads to. */
 const TARGETS = {
   throw: { x: 0, z: (THROW_AREA.minZ + THROW_AREA.maxZ) / 2 },
-  lane0: { x: laneCenterX(0), z: LANE_NEAR_Z - 2 },
+  lane0: { x: LANE_NEAR_X - 3, z: laneCenterZ(0) },
   hangar: { x: PLANE_PADS[1].x, z: PLANE_PADS[1].z },
   eggs: { x: EGG_STANDS[0].x, z: EGG_STANDS[0].z - 3.5 },
 }
@@ -85,7 +85,10 @@ export function TutorialArrows() {
     const offset = (state.clock.elapsedTime * 3) % SPACING
     let count = 0
     for (let d = 1.6 + offset; d < dist - 1 && count < MAX_CHEVRONS; d += SPACING) {
-      _p.set(player.x + ux * d, 0.04, player.z + uz * d)
+      const x = player.x + ux * d
+      const z = player.z + uz * d
+      // Over the stage steps and lane floors, not under them.
+      _p.set(x, groundHeightAt(x, z) + 0.06, z)
       // Fade in near the player, shrink near the goal.
       const scale = Math.min(1, (d - 1.2) / 1.5) * Math.min(1, (dist - d) / 2)
       _s.setScalar(Math.max(0.01, scale))

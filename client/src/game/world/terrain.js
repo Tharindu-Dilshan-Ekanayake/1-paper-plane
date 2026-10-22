@@ -1,5 +1,5 @@
 import { hash2, mulberry32 } from '@shared/rng'
-import { PLAZA, TRACK_HALF_WIDTH } from '@shared/world'
+import { PLAZA } from '@shared/world'
 
 import { STYLE } from '../materials'
 import { PALETTE } from '../sceneStyle'
@@ -162,8 +162,8 @@ export function buildTerrain(blocks, { treeDensity = 1 } = {}) {
   const plazaTrees = [
     [PLAZA.minX + 4, PLAZA.maxZ - 5],
     [PLAZA.maxX - 4, PLAZA.maxZ - 5],
-    [-TRACK_HALF_WIDTH - 14, PLAZA.maxZ - 4],
-    [TRACK_HALF_WIDTH - 2, PLAZA.maxZ - 4],
+    [-20, PLAZA.maxZ - 3],
+    [-4, PLAZA.maxZ - 3],
   ]
   for (const [x, z] of plazaTrees) addTree(blocks, x, 0, z, 1.1, rand)
 

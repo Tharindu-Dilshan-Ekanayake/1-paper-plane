@@ -3,10 +3,12 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { useQuality } from '../../store/quality'
 import { BlockSet, disposeBlocks, PropBuilder } from '../blocks'
+import { glowTime } from '../glow'
 import { createToyMaterial, sharedMaterials, toyTime } from '../materials'
 import { createGroundGeometry, createGroundMap } from './ground'
 import { buildEggStands } from './eggs'
 import { buildPortalFrame } from './portalFrame'
+import { buildStage } from './stage'
 import { buildHangar, buildLanes } from './structures'
 import { buildTargets } from './targets'
 import { createThrowAreaDecal } from './throwArea'
@@ -28,6 +30,7 @@ export function World() {
   // Drives every animated toy-material style (water...).
   useFrame((state) => {
     toyTime.value = state.clock.elapsedTime
+    glowTime.value = state.clock.elapsedTime
   })
 
   useEffect(() => {
@@ -59,6 +62,7 @@ export function World() {
     buildTerrain(set, { treeDensity: decorDensity })
     buildLanes(set)
     buildHangar(set)
+    buildStage(set)
     buildPortalFrame(set)
     buildWaterfall(set)
 

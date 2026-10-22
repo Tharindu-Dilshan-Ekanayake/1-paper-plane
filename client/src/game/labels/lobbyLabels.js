@@ -1,6 +1,16 @@
 import { EGGS, LANES, PETS, PLANES, PRODUCTS, WORLD2_POWER } from '@shared/balance'
 import { formatNumber } from '@shared/format'
-import { EGG_STANDS, FREE_REWARD, LANE_TARGET_Z, laneCenterX, PLANE_PADS, PORTAL, SPHINX_STAND } from '@shared/world'
+import {
+  EGG_STANDS,
+  FREE_REWARD,
+  LANE_TARGET_X,
+  laneCenterZ,
+  PLANE_PADS,
+  PORTAL,
+  SPHINX_STAND,
+  STAGE,
+  THROW_LINE_Z,
+} from '@shared/world'
 
 import { eggHeight } from '../world/eggs'
 import { LANE_THEMES } from '../world/structures'
@@ -40,7 +50,7 @@ export function laneLabelSpec(index) {
 export function laneLabels() {
   return LANES.map((lane, i) => ({
     id: `lane-${i}`,
-    position: [laneCenterX(i), lane.product ? 7.9 : 7.0, LANE_TARGET_Z],
+    position: [LANE_TARGET_X, lane.product ? 7.9 : 7.0, laneCenterZ(i)],
     spec: laneLabelSpec(i),
     fade: 150,
   }))
@@ -142,6 +152,14 @@ const freeRewardLabel = () => ({
   fade: 90,
 })
 
+/** The sign on the stage's launch arch. */
+const stageLabel = () => ({
+  id: 'stage',
+  position: [0, STAGE.height + 10.2, THROW_LINE_Z + 1],
+  spec: { lines: [{ text: 'THROW!', size: 80, gradient: ['#fff6b0', '#ffd21f', '#ff8a00'] }], pxPerUnit: 34 },
+  fade: 160,
+})
+
 const portalLabel = () => ({
   id: 'portal',
   position: [PORTAL.x, PORTAL.radius * 2 + 2.8, PORTAL.z],
@@ -157,5 +175,5 @@ const portalLabel = () => ({
 
 /** Every label in the lobby. */
 export function lobbyLabels(profile, { sphinxStock = 0 } = {}) {
-  return [...laneLabels(), ...padLabels(profile), ...eggLabels(), sphinxLabel(sphinxStock), freeRewardLabel(), portalLabel()]
+  return [...laneLabels(), ...padLabels(profile), ...eggLabels(), sphinxLabel(sphinxStock), freeRewardLabel(), portalLabel(), stageLabel()]
 }
