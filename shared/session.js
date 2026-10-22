@@ -6,6 +6,9 @@ import {
   applyTrain,
   awardBadge,
   buyPlane,
+  claimDaily,
+  claimFreeReward,
+  claimPlaytime,
   createSession,
   deletePet,
   equipBestPets,
@@ -18,8 +21,9 @@ import {
   isMaxLevel,
   planeById,
   unequipPet,
+  usePotion,
 } from './logic.js'
-import { eggStandNear, inRect, inThrowArea, laneRect, PLANE_PADS, padRect } from './world.js'
+import { eggStandNear, FREE_REWARD, inRect, inThrowArea, laneRect, PLANE_PADS, padRect } from './world.js'
 
 const PLANES_INDEX = Object.fromEntries(PLANES.map((p, i) => [p.id, i]))
 
@@ -235,6 +239,30 @@ export class PlayerSession {
       if (deletePet(this.profile, Number(uid)).ok) this.dirty = true
     },
 
+    claimDaily({ day }, now) {
+      const result = this.fail(claimDaily(this.profile, Number(day), now))
+      this.afterReward(result)
+    },
+
+    claimPlaytime({ index }, now) {
+      const result = this.fail(claimPlaytime(this.profile, this.session, Number(index), now))
+      this.afterReward(result)
+    },
+
+    claimFreeReward() {
+      const p = this.getPosition()
+      if (Math.hypot(p.x - FREE_REWARD.x, p.z - FREE_REWARD.z) > FREE_REWARD.radius + 1.5) return
+      const result = this.fail(claimFreeReward(this.profile, this.session))
+      this.afterReward(result)
+    },
+
+    usePotion({ itemId }, now) {
+      const result = this.fail(usePotion(this.profile, itemId, now))
+      if (!result.ok) return
+      this.dirty = true
+      this.toast(`${ITEMS[itemId].name} active! x2 ${result.boost === 'power' ? 'Power' : 'Wins'} for 5 minutes`, 'success')
+    },
+
     purchase({ productId }, now) {
       if (!this.mockPurchases) {
         this.toast('Purchases are coming soon!')
@@ -263,6 +291,13 @@ export class PlayerSession {
     this.reveal(result)
     if (this.dirty) this.sendProfile()
     return result
+  }
+
+  afterReward(result) {
+    if (!result?.ok) return
+    this.dirty = true
+    if (result.pets?.length) this.reveal(result)
+    else this.toast(`Claimed: ${result.label ?? 'Free Reward'}!`, 'success')
   }
 
   /** Sends newly gained pets to the client's hatch animation. */

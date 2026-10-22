@@ -2,7 +2,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import { InstancedMesh, Matrix4, Quaternion, Vector3 } from 'three'
 
-import { SPHINX_STAND } from '@shared/world'
+import { FREE_REWARD, SPHINX_STAND } from '@shared/world'
 
 import { getGame, useGame } from '../../store/game'
 import { sphinxLabelSpec } from '../labels/lobbyLabels'
@@ -177,3 +177,25 @@ export function SphinxShowcase() {
 }
 
 export default Pets
+
+/** The Free Reward stand's crab, bobbing on its pedestal by spawn. */
+export function RewardCrab() {
+  const ref = useRef(null)
+  useFrame((state) => {
+    const mesh = ref.current
+    if (!mesh) return
+    const t = state.clock.elapsedTime
+    mesh.position.y = 1.15 + Math.abs(Math.sin(t * 2.2)) * 0.25
+    mesh.rotation.y = Math.sin(t * 0.8) * 0.5 + Math.PI * 0.15
+  })
+  return (
+    <mesh
+      ref={ref}
+      geometry={petGeometry('crab')}
+      material={sharedMaterials().props}
+      position={[FREE_REWARD.x, 1.15, FREE_REWARD.z]}
+      scale={1.9}
+      castShadow
+    />
+  )
+}

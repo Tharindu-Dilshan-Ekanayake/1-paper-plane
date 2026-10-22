@@ -1,4 +1,4 @@
-import { normalizeProfile } from '@shared/logic'
+import { applyOfflineProgress, normalizeProfile } from '@shared/logic'
 import { PlayerSession } from '@shared/session'
 
 import { runtime } from '../game/runtime'
@@ -26,6 +26,8 @@ function loadSave() {
 export function createLocalServer({ id, name, onEvent }) {
   const profile = normalizeProfile(loadSave(), id, name)
   const startedAt = Date.now()
+  // "Keep training while you're offline": credit the lane you logged off in.
+  const offline = applyOfflineProgress(profile, startedAt)
 
   const session = new PlayerSession(profile, {
     now: startedAt,
@@ -60,6 +62,7 @@ export function createLocalServer({ id, name, onEvent }) {
   document.addEventListener('visibilitychange', onHide)
 
   session.sendProfile()
+  if (offline) onEvent('offline', offline)
 
   return {
     send(type, payload) {

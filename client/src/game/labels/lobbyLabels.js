@@ -1,6 +1,6 @@
 import { EGGS, LANES, PETS, PLANES, PRODUCTS } from '@shared/balance'
 import { formatNumber } from '@shared/format'
-import { EGG_STANDS, LANE_TARGET_Z, laneCenterX, PLANE_PADS, SPHINX_STAND } from '@shared/world'
+import { EGG_STANDS, FREE_REWARD, LANE_TARGET_Z, laneCenterX, PLANE_PADS, SPHINX_STAND } from '@shared/world'
 
 import { eggHeight } from '../world/eggs'
 import { LANE_THEMES } from '../world/structures'
@@ -135,7 +135,14 @@ export function sphinxLabel(stock) {
   }
 }
 
+const freeRewardLabel = () => ({
+  id: 'free-reward',
+  position: [FREE_REWARD.x, 4.6, FREE_REWARD.z],
+  spec: { lines: [{ text: 'FREE REWARD', size: 50, gradient: ['#fff2b0', '#ffb347', '#ff6a1e'] }], pxPerUnit: 60 },
+  fade: 90,
+})
+
 /** Every label in the lobby. Areas add theirs as their phases land. */
 export function lobbyLabels(profile, { sphinxStock = 0 } = {}) {
-  return [...laneLabels(), ...padLabels(profile), ...eggLabels(), sphinxLabel(sphinxStock)]
+  return [...laneLabels(), ...padLabels(profile), ...eggLabels(), sphinxLabel(sphinxStock), freeRewardLabel()]
 }

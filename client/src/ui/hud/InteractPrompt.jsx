@@ -16,6 +16,14 @@ function usePrompt() {
   const pad = useGame((s) => s.zone.pad)
   const owned = useGame((s) => s.profile.ownedPlanes)
   const equipped = useGame((s) => s.profile.equippedPlane)
+  const atFreeReward = useGame((s) => s.zone.freeReward)
+  const freeTaken = useGame((s) => s.session.freeRewardTaken)
+
+  if (atFreeReward) {
+    return freeTaken
+      ? { title: 'Free Reward', action: 'Come back next time!', run: null }
+      : { title: 'Free Reward', action: 'Claim', run: () => actions.claimFreeReward() }
+  }
 
   if (pad >= 0) {
     const plane = PLANES[pad]

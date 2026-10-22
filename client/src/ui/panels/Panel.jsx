@@ -40,6 +40,8 @@ export function CloseButton({ onClick, style }) {
 export function Panel({ title, width = 920, children, footer, onClose }) {
   const closePanel = useGame((s) => s.closePanel)
   const close = onClose || closePanel
+  // Long titles shrink to stay clear of the close button.
+  const titleSize = Math.min(92, (width - 190) / (title.length * 0.62))
 
   useEffect(() => {
     const onKey = (e) => {
@@ -73,8 +75,8 @@ export function Panel({ title, width = 920, children, footer, onClose }) {
         >
           {children}
         </div>
-        <div className="absolute leading-none" style={{ left: u(60), top: u(8), fontSize: u(92) }}>
-          <StrokeText stroke={u(16)}>{title}</StrokeText>
+        <div className="absolute leading-none" style={{ left: u(60), top: u(8 + (92 - titleSize) * 0.6), fontSize: u(titleSize) }}>
+          <StrokeText stroke={u(titleSize * 0.17)}>{title}</StrokeText>
         </div>
         <CloseButton onClick={close} style={{ right: u(-24), top: u(20) }} />
         {footer}

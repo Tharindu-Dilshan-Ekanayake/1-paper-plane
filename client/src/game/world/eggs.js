@@ -1,6 +1,6 @@
 import { SphereGeometry } from 'three'
 
-import { EGG_STANDS, SPHINX_STAND } from '@shared/world'
+import { EGG_STANDS, FREE_REWARD, SPHINX_STAND } from '@shared/world'
 
 import { EGG_COLORS } from '../../ui/icons'
 import { STYLE } from '../materials'
@@ -63,6 +63,11 @@ export function buildEggStands(blocks, props) {
       props.box(stand.x, eggHeight(stand) + 1.55, stand.z, 0.22, 0.75, 0.22, '#ffd23a', STYLE.GLOW, [0.25, 0, 0])
     }
   }
+
+  // Free Reward stand by spawn; its crab is drawn by RewardCrab.
+  blocks.addOn(FREE_REWARD.x, 0, FREE_REWARD.z, 3, 0.6, 3, '#6a1420')
+  blocks.addOn(FREE_REWARD.x, 0.6, FREE_REWARD.z, 2.6, 0.3, 2.6, '#ff3b3b', STYLE.GLOW)
+  blocks.addOn(FREE_REWARD.x, 0.9, FREE_REWARD.z, 2.2, 0.2, 2.2, '#f4f7fb')
 
   // Sphinx showcase plinth: gold-trimmed and taller, the pet itself is added by Showcase.
   const { x, z } = SPHINX_STAND

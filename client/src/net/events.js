@@ -31,6 +31,10 @@ export function handleServerEvent(type, payload) {
       game.setHatch({ eggId: payload.eggId, pets: payload.pets, id: Date.now() })
       break
 
+    case 'offline':
+      game.openPanel('offline', payload)
+      break
+
     case 'toast':
       game.toast(payload.text, payload.kind)
       break
