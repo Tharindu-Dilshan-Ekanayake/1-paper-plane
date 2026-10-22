@@ -2,7 +2,6 @@ import { LEVEL_STEPS, SHOP } from '@shared/balance'
 import { formatMultiplier, formatNumber } from '@shared/format'
 import { hudMultiplier, isMaxLevel } from '@shared/logic'
 
-import { actions } from '../../net/actions'
 import { buy } from '../../net/shop'
 import { useGame } from '../../store/game'
 import useNow from '../useNow'
@@ -19,52 +18,6 @@ const PACKS = [
   { product: 'power1m', label: '+1M', gradient: GRADIENTS.blueButton },
   { product: 'power10m', label: '+10M', gradient: GRADIENTS.purpleButton },
 ]
-
-/**
- * Auto Rebirth: when on, the server rebirths you the moment you hit max level, so you
- * can stay in a lane and keep climbing. Shown once you've trained.
- */
-function AutoRebirthSwitch() {
-  const on = useGame((s) => Boolean(s.profile.settings.autoRebirth))
-  const visible = useGame((s) => s.profile.stats.trains > 0 && !s.flight && !s.throwResult)
-  if (!visible) return <span />
-
-  return (
-    <button
-      type="button"
-      onClick={() => actions.setSetting('autoRebirth', !on)}
-      title={on ? 'Auto Rebirth: ON' : 'Auto Rebirth: OFF'}
-      aria-pressed={on}
-      className="pp-btn pointer-events-auto flex items-center"
-      style={{ gap: u(6) }}
-    >
-      <Icon name="rebirth" size={u(44)} />
-      <span
-        className="relative block"
-        style={{
-          width: u(78),
-          height: u(36),
-          borderRadius: u(18),
-          border: `${u(3)} solid #111`,
-          background: on ? GRADIENTS.greenButton : GRADIENTS.redButton,
-          boxShadow: `0 ${u(3)} 0 #111, inset 0 ${u(3)} 0 rgba(255,255,255,0.35)`,
-        }}
-      >
-        <span
-          className="absolute rounded-full transition-[left] duration-150"
-          style={{
-            top: u(2),
-            left: on ? u(42) : u(2),
-            width: u(26),
-            height: u(26),
-            background: 'linear-gradient(180deg, #ffffff, #e2e6ea)',
-            border: `${u(2)} solid #111`,
-          }}
-        />
-      </span>
-    </button>
-  )
-}
 
 function LevelBar() {
   const level = useGame((s) => s.profile.level)
@@ -120,8 +73,8 @@ function PackButton({ product, label, gradient }) {
 }
 
 /**
- * Bottom centre, all on one width: Power, Auto Rebirth and Multiplier in a row, the
- * level bar, then the three power packs.
+ * Bottom centre, all on one width: Power and Multiplier, the level bar, then the three
+ * power packs.
  */
 export function PowerBar() {
   const power = useGame((s) => s.profile.power)
@@ -135,18 +88,13 @@ export function PowerBar() {
       className="pointer-events-none absolute left-1/2 flex -translate-x-1/2 flex-col items-center"
       style={{ bottom: u(20), width: u(WIDTH), gap: u(8) }}
     >
-      <div className="grid w-full items-center" style={{ gridTemplateColumns: '1fr auto 1fr', fontSize: u(36), padding: `0 ${u(6)}` }}>
-        <span className="justify-self-start">
-          <StrokeText stroke={u(8)} gradient={GRADIENTS.gold}>
-            Power: {formatNumber(power)}
-          </StrokeText>
-        </span>
-        <AutoRebirthSwitch />
-        <span className="justify-self-end">
-          <StrokeText stroke={u(8)} gradient={GRADIENTS.gold}>
-            Multiplier: {formatMultiplier(multiplier)}
-          </StrokeText>
-        </span>
+      <div className="flex w-full items-center justify-between" style={{ fontSize: u(36), padding: `0 ${u(6)}` }}>
+        <StrokeText stroke={u(8)} gradient={GRADIENTS.gold}>
+          Power: {formatNumber(power)}
+        </StrokeText>
+        <StrokeText stroke={u(8)} gradient={GRADIENTS.gold}>
+          Multiplier: {formatMultiplier(multiplier)}
+        </StrokeText>
       </div>
       <LevelBar />
       <div className="flex w-full justify-between" style={{ marginTop: u(6) }}>
