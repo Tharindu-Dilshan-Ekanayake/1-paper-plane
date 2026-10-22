@@ -22,6 +22,8 @@ export const runtime = {
     anim: 'idle',
     /** Seconds left on the current throw swing, driving the arm pose. */
     throwTimer: 0,
+    /** Throws started so far; other players see one each time it goes up. */
+    throwSeq: 0,
     /** True from a throw's release until the frisbee is back in the hand. */
     frisbeeAway: false,
     /** Seconds left on the catch when the frisbee comes back. */

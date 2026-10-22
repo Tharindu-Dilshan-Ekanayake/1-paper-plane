@@ -14,6 +14,7 @@ import {
 } from '../bloxity/avatarAssets'
 import { loadOBJ, loadPartGLB, loadTexture } from '../bloxity/avatarLoader'
 import { useBloxity } from '../bloxity/BloxityContext'
+import { shareLook } from '../net/connection'
 import {
   animateRig,
   applyPart,
@@ -21,6 +22,8 @@ import {
   applySkin,
   attachAccessory,
   collectRig,
+  disposeMergedBody,
+  mergeBody,
   placeHand,
 } from './avatarRig'
 
@@ -35,34 +38,39 @@ function fallbackMotion(delta) {
 }
 
 /**
- * The player's own Bloxity avatar, assembled at runtime.
+ * A Bloxity avatar wearing `equipped` with `proportions`, assembled at runtime: yours,
+ * or another player's from what the server tells us they wear.
  *
  * `player.glb` is the base humanoid rig: six skinned meshes (head, torso, two arms,
  * two legs) sharing one skeleton. Assembly means, per equipped slot:
  *   - body parts  -> swap the matching mesh's geometry
  *   - hat / back  -> attach an OBJ to the Neck1 / Spine2 bone
  *   - skin        -> set one texture as the map on every skinned mesh
+ * then the six parts are merged into one skinned mesh, so a whole character is a
+ * single draw call (plus one per hat or back item).
  *
  * Any slot that is unequipped or 404s leaves the base body's own part in place. The
- * whole thing re-assembles when `onAvatarChanged` / `onProportionsChanged` fire, so
- * changing cosmetics in the Bloxity portal updates the character live.
+ * whole thing re-assembles when `equipped` changes.
  *
- * @param {{ onReady?: () => void, targetHeight?: number, motionRef?: object, handRef?: object }} props
+ * @param {{ equipped?: object, proportions?: object, onReady?: () => void,
+ *   onStep?: (text: string) => void, targetHeight?: number, motionRef?: object,
+ *   handRef?: object }} props
  *   `targetHeight` is the world-space height to fit the avatar into, in the game's
- *   own units. `handRef` is an object beside the avatar that gets moved onto the right
- *   palm every frame (the held frisbee rides in it). Bloxity authors the rig ~6.4 units tall with the feet at y=0, which is
- *   far bigger than a metric-scale physics capsule, so the model is measured and
- *   rescaled rather than trusted at native size.
+ *   own units: Bloxity authors the rig ~6.4 units tall with the feet at y=0, far bigger
+ *   than the game's metric scale, so the model is measured and rescaled. `handRef` is
+ *   an object beside the avatar that gets moved onto the right palm every frame (the
+ *   held frisbee rides in it). `onStep` reports loading progress.
  */
-export const PlayerAvatar = forwardRef(function PlayerAvatar(
-  { onReady, targetHeight = 1.8, motionRef, handRef, ...props },
+export const BloxityAvatar = forwardRef(function BloxityAvatar(
+  { equipped, proportions, onReady, onStep, targetHeight = 1.8, motionRef, handRef, ...props },
   ref,
 ) {
-  const { avatar: equipped, proportions, game } = useBloxity()
   // three's own GLTFLoader (the one the cosmetics use too), not drei's useGLTF, which
   // would bundle a second loader plus Draco/Meshopt/KTX2 decoders this GLB never needs.
   const { scene: baseScene } = useLoader(GLTFLoader, BASE_BODY_URL)
   const [assembled, setAssembled] = useState(false)
+  /** The merged body currently shown; replaced on every re-assembly. */
+  const bodyRef = useRef(null)
 
   // The GLTF cache hands back one shared scene. Clone via SkeletonUtils so this
   // instance gets an independent, still-working skeleton.
@@ -100,11 +108,12 @@ export const PlayerAvatar = forwardRef(function PlayerAvatar(
   // --- Assemble equipped cosmetics --------------------------------------------
   useEffect(() => {
     let cancelled = false
+    const holder = bodyRef
     // Accessories are re-attached on every rebuild; track them so the previous
     // hat/back can be removed rather than stacking up.
     const attached = []
 
-    game.loadingStep('Loading avatar…')
+    onStep?.('Loading avatar…')
 
     const jobs = []
 
@@ -176,6 +185,14 @@ export const PlayerAvatar = forwardRef(function PlayerAvatar(
           }
         }
 
+        // One draw call for the body: merge the assembled parts.
+        try {
+          disposeMergedBody(holder.current)
+          holder.current = mergeBody(rig)
+        } catch (err) {
+          console.warn('[bloxity] could not merge the body; drawing its parts', err)
+          for (const mesh of rig.skinnedMeshes) mesh.visible = true
+        }
         setAssembled(true)
       })
       .catch((err) => {
@@ -187,12 +204,27 @@ export const PlayerAvatar = forwardRef(function PlayerAvatar(
       cancelled = true
       for (const object of attached) {
         object.parent?.remove(object)
-        object.traverse((child) => child.geometry?.dispose())
+        object.traverse((child) => {
+          child.geometry?.dispose()
+          if (child.isMesh) child.material?.dispose()
+        })
       }
     }
-  }, [rig, equipped, game])
+  }, [rig, equipped, onStep])
 
-  // --- Proportions -------------------------------------------------------------
+  // Frees what this avatar made when it goes (other players come and go). Loaded
+  // part scenes and textures are shared through the loader cache, so they stay.
+  useEffect(() => {
+    const holder = bodyRef
+    return () => {
+      disposeMergedBody(holder.current)
+      holder.current = null
+      for (const mesh of rig.skinnedMeshes) mesh.material.dispose()
+      for (const geometry of Object.values(rig.originalGeometries)) geometry.dispose()
+    }
+  }, [rig])
+
+  // --- Proportions and pose -----------------------------------------------------
   // Applied per frame rather than in an effect: every bone is reset to its rest pose
   // and re-scaled each pass, which keeps it idempotent and survives anything else
   // that touches the skeleton.
@@ -225,6 +257,16 @@ export const PlayerAvatar = forwardRef(function PlayerAvatar(
       </group>
     </group>
   )
+})
+
+/**
+ * Your own avatar: whatever your Bloxity account (or guest) is wearing. Also tells the
+ * other players, so they see you dressed the same.
+ */
+export const PlayerAvatar = forwardRef(function PlayerAvatar(props, ref) {
+  const { avatar, proportions, game } = useBloxity()
+  useEffect(() => shareLook(avatar, proportions), [avatar, proportions])
+  return <BloxityAvatar ref={ref} {...props} equipped={avatar} proportions={proportions} onStep={game.loadingStep} />
 })
 
 useLoader.preload(GLTFLoader, BASE_BODY_URL)

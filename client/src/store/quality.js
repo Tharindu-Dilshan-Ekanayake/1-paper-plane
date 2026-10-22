@@ -25,6 +25,8 @@ export const PRESETS = {
     maxTexture: 512,
     /** Remote players beyond this are not drawn at all. */
     remoteDrawDistance: 40,
+    /** How many of the nearest other players get their real avatar (the rest are blocky). */
+    remoteAvatars: 3,
     remoteNameDistance: 18,
     /** World labels fade out past this. */
     labelDistance: 70,
@@ -45,6 +47,7 @@ export const PRESETS = {
     cloudCount: 14,
     maxTexture: 1024,
     remoteDrawDistance: 60,
+    remoteAvatars: 5,
     remoteNameDistance: 28,
     labelDistance: 110,
     decorDensity: 0.75,
@@ -62,6 +65,7 @@ export const PRESETS = {
     cloudCount: 18,
     maxTexture: 1024,
     remoteDrawDistance: 60,
+    remoteAvatars: 7,
     remoteNameDistance: 35,
     labelDistance: 150,
     decorDensity: 1,

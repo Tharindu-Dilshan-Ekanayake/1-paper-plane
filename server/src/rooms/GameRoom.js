@@ -59,6 +59,7 @@ export class GameRoom extends Room {
     // Everything the client can ask for goes through the player's session.
     this.onMessage('*', (client, type, payload) => {
       if (type === 'pos') return this.handlePosition(client, payload)
+      if (type === 'look') return this.handleLook(client, payload)
       const member = this.members.get(client.sessionId)
       if (!member) return
       member.session.handle(String(type), payload || {}, Date.now())
@@ -243,6 +244,32 @@ export class GameRoom extends Room {
     player.z = clamped.z
     player.rotY = Number(msg.r) || 0
     player.anim = ['idle', 'walk', 'jump', 'throw'].includes(msg.a) ? msg.a : 'idle'
+    const throws = Number(msg.n)
+    if (Number.isInteger(throws) && throws >= 0 && throws < 2 ** 32) player.throws = throws
+  }
+
+  /**
+   * What a player's avatar wears, so everyone else can dress them the same. Purely
+   * cosmetic, so trusted as sent, but kept to a small object of short strings and
+   * plain numbers.
+   */
+  handleLook(client, msg) {
+    const player = this.state.players.get(client.sessionId)
+    if (!player || !msg || typeof msg !== 'object') return
+    const clean = (obj, keep) => {
+      const out = {}
+      if (!obj || typeof obj !== 'object') return out
+      for (const [key, value] of Object.entries(obj).slice(0, 24)) {
+        if (key.length > 24) continue
+        if (keep(value)) out[key] = value
+      }
+      return out
+    }
+    const look = JSON.stringify({
+      equipped: clean(msg.equipped, (v) => (typeof v === 'string' && v.length <= 40) || (Number.isFinite(v) && Math.abs(v) < 1e12)),
+      proportions: clean(msg.proportions, (v) => Number.isFinite(v) && v > 0.2 && v < 3),
+    })
+    if (look.length <= 2048 && look !== player.look) player.look = look
   }
 
   tick(dt) {

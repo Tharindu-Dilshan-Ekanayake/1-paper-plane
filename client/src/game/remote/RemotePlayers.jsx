@@ -7,7 +7,7 @@ import {
   Vector3,
 } from 'three'
 
-import { THROW_LINE_Z } from '@shared/world'
+import { inThrowArea, laneAt, THROW_LINE_Z } from '@shared/world'
 
 import { remotePlayers } from '../../net/remotePlayers'
 import { getQuality } from '../../store/quality'
@@ -15,7 +15,9 @@ import { createBoxInstances, disposeBlocks } from '../blocks'
 import { createFrisbeeMesh, disposeFrisbeeMesh, frisbeeGlow, frisbeeOrientation } from '../frisbee'
 import { createGlowInstances, disposeGlow } from '../glow'
 import { sharedMaterials, STYLE } from '../materials'
+import { CATCH_TIME, RELEASE_AT, RELEASE_DELAY, THROW_TIME } from '../playerPose'
 import { runtime } from '../runtime'
+import { targetPoint } from '../world/targets'
 import { hideNameplatesFrom, NAMEPLATE_POOL_SIZE, placeNameplate } from './nameplates'
 
 /** Remote players are drawn this far in the past, so 10 Hz updates interpolate. */
@@ -23,7 +25,37 @@ const INTERP_DELAY_MS = 110
 const MAX_REMOTES = 8
 const PARTS = 6
 const MAX_GHOSTS = 8
+/** Short throws (training and clicks) in the air at once, across everyone. */
+const MAX_TOSSES = 12
+/** Every remote frisbee shares one mesh: stage flights, tosses, and ones in hand. */
+const MAX_FRISBEES = MAX_GHOSTS + MAX_TOSSES + MAX_REMOTES
+const TOSS_TIME = 0.42
+const TOSS_RANGE = 9
+const TOSS_ARC = 0.9
 const S = 0.36
+
+/** Pooled short throws: from the thrower's hand to their lane's target or ahead. */
+const tosses = Array.from({ length: MAX_TOSSES }, () => ({
+  active: false,
+  released: false,
+  t: 0,
+  r: null,
+  planeId: 'paper',
+  from: new Vector3(),
+  to: new Vector3(),
+}))
+
+function spawnToss(r) {
+  const toss = tosses.find((x) => !x.active) || tosses[0]
+  toss.active = true
+  toss.released = false
+  toss.t = 0
+  toss.r = r
+  toss.planeId = r.planeId
+  const lane = laneAt(r.position.x, r.position.z, 0.5)
+  if (lane >= 0) toss.to.fromArray(targetPoint(lane))
+  else toss.to.set(r.position.x + Math.sin(r.yaw) * TOSS_RANGE, r.position.y + 0.4, r.position.z + Math.cos(r.yaw) * TOSS_RANGE)
+}
 
 /** Classic blocky figure, in studs-scaled units: [x, y(pivot), size, hangs from pivot]. */
 const PART_LAYOUT = [
@@ -102,8 +134,8 @@ export function RemotePlayers() {
     const body = createBoxInstances(MAX_REMOTES * PARTS, sharedMaterials().toy, STYLE.SMOOTH)
     body.castShadow = true
     // Other players' throws: their own frisbees (same mesh and material as yours).
-    const ghosts = createFrisbeeMesh(MAX_GHOSTS)
-    return { body, ghosts, ghostGlows: createGlowInstances(MAX_GHOSTS, 0.6) }
+    const ghosts = createFrisbeeMesh(MAX_FRISBEES)
+    return { body, ghosts, ghostGlows: createGlowInstances(MAX_FRISBEES, 0.6) }
   }, [])
 
   useEffect(
@@ -139,7 +171,24 @@ export function RemotePlayers() {
       const visible = distance < settings.remoteDrawDistance && runtime.camera.mode === 'follow'
       r.shadow.visible = visible
 
-      if (visible && instance + PARTS <= MAX_REMOTES * PARTS) {
+      // Each new throw of theirs: the swing (as for you, a new one only once the last
+      // has let go) and, outside the throw area, a frisbee leaving their hand. Throws
+      // off the stage fly as ghost flights instead.
+      if (r.throws !== r.seenThrows) {
+        const fresh = r.throws > r.seenThrows
+        r.seenThrows = r.throws
+        if (fresh) {
+          if (r.throwT <= THROW_TIME * (1 - RELEASE_AT)) r.throwT = THROW_TIME
+          if (visible && !inThrowArea(r.position.x, r.position.z, 2)) spawnToss(r)
+        }
+      }
+      const wasAway = r.frisbeeAway
+      r.throwT = Math.max(0, r.throwT - delta)
+      r.frisbeeAway = r.throwT > 0 && r.throwT <= THROW_TIME * (1 - RELEASE_AT)
+      r.catchT = wasAway && !r.frisbeeAway ? CATCH_TIME : Math.max(0, r.catchT - delta)
+
+      // Players drawn as their real avatar (RemoteAvatars) skip the blocky figure.
+      if (visible && !r.fullAvatar && instance + PARTS <= MAX_REMOTES * PARTS) {
         const h = hashString(r.sessionId)
         const shirt = SHIRTS[h % SHIRTS.length]
         const pants = PANTS[(h >>> 8) % PANTS.length]
@@ -230,6 +279,47 @@ export function RemotePlayers() {
       ghostGlows.setColorAt(g, frisbeeGlow(throwInfo.planeId))
       g += 1
     }
+
+    // --- Tosses: training and click throws ---------------------------------------
+    const tossGlow = 1.3 * settings.frisbeeGlow
+    for (const toss of tosses) {
+      if (!toss.active) continue
+      toss.t += delta
+      const flight = (toss.t - RELEASE_DELAY) / TOSS_TIME
+      if (flight < 0) continue
+      if (flight >= 1 || g >= MAX_FRISBEES) {
+        toss.active = false
+        continue
+      }
+      // Leaves from wherever their hand has swung the frisbee to at the release.
+      if (!toss.released) {
+        toss.released = true
+        if (toss.r?.grip) toss.r.grip.getWorldPosition(toss.from)
+        else if (toss.r) toss.from.set(toss.r.position.x, toss.r.position.y + 1.4, toss.r.position.z)
+      }
+      _p.lerpVectors(toss.from, toss.to, flight)
+      _p.y += Math.sin(flight * Math.PI) * TOSS_ARC
+      frisbeeOrientation(_q, now * 0.025 + g, 0.1, 0)
+      ghosts.setMatrixAt(g, _m.compose(_p, _q, _s.set(0.75, 0.75, 0.75)))
+      ghosts.setStyle(g, toss.planeId)
+      ghostGlows.setMatrixAt(g, _m.compose(_p, _q, _s.setScalar(tossGlow)))
+      ghostGlows.setColorAt(g, frisbeeGlow(toss.planeId))
+      g += 1
+    }
+
+    // --- The frisbee in each fully drawn player's hand -----------------------------
+    const heldGlow = 1.5 * 0.95 * settings.frisbeeGlow
+    for (const r of remotePlayers.values()) {
+      if (!r.fullAvatar || !r.grip || r.frisbeeAway || g >= MAX_FRISBEES || runtime.camera.mode !== 'follow') continue
+      r.grip.updateWorldMatrix(true, false)
+      ghosts.setMatrixAt(g, r.grip.matrixWorld)
+      ghosts.setStyle(g, r.planeId)
+      _p.setFromMatrixPosition(r.grip.matrixWorld)
+      ghostGlows.setMatrixAt(g, _m.compose(_p, _q.identity(), _s.setScalar(heldGlow)))
+      ghostGlows.setColorAt(g, frisbeeGlow(r.planeId))
+      g += 1
+    }
+
     ghosts.count = g
     ghostGlows.count = g
     ghosts.instanceMatrix.needsUpdate = true

@@ -47,6 +47,7 @@ export function beginFlight(result) {
     meter: 0,
   })
   runtime.player.throwTimer = THROW_TIME
+  runtime.player.throwSeq += 1
   runtime.player.yaw = Math.PI
   runtime.player.frozen = true
   runtime.camera.mode = 'flight'

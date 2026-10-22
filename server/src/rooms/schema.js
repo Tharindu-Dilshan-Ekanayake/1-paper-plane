@@ -14,6 +14,10 @@ export const PlayerState = schema(
     rotY: t.float32(),
     /** 'idle' | 'walk' | 'jump' | 'throw' */
     anim: t.string(),
+    /** Throws so far (any kind); each new one plays the throw for everyone watching. */
+    throws: t.uint32(),
+    /** What their Bloxity avatar wears, as JSON `{ equipped, proportions }` ('' = base). */
+    look: t.string(),
     planeId: t.string(),
     /** Equipped pet species, at most 3. */
     petIds: t.array('string'),

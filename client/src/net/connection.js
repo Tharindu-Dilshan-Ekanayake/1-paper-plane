@@ -29,6 +29,19 @@ function serverUrl() {
 let active = null
 let generation = 0
 let lastIdentity = null
+/** What our avatar wears, as last shared; sent again on every join. */
+let localLook = null
+/** Sends `look` to the room now, if there is one. */
+let sendLook = () => {}
+
+/**
+ * Shares what our Bloxity avatar wears so other players can dress our character the
+ * same. Kept and re-sent on every (re)join.
+ */
+export function shareLook(equipped, proportions) {
+  localLook = { equipped: equipped || {}, proportions: proportions || {} }
+  sendLook()
+}
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -110,24 +123,32 @@ function attachRoom(room, identity, Callbacks) {
   })
   callbacks.listen('isPrivate', syncLobby)
 
-  // ~10 Hz position reports, skipped while standing still.
-  let last = { x: NaN, y: NaN, z: NaN, a: '' }
+  sendLook = () => {
+    if (localLook) room.send('look', localLook)
+  }
+  sendLook()
+
+  // ~10 Hz position reports, skipped while standing still and not throwing. `n`
+  // counts our throws, so others see each one.
+  let last = { x: NaN, y: NaN, z: NaN, a: '', n: -1 }
   let lastSentAt = 0
   const posId = setInterval(() => {
     const p = runtime.player.position
     const a = runtime.player.anim
+    const n = runtime.player.throwSeq
     const now = performance.now()
     const moved = Math.abs(p.x - last.x) + Math.abs(p.y - last.y) + Math.abs(p.z - last.z) > 0.03
-    if (!moved && a === last.a && now - lastSentAt < 1000) return
-    last = { x: p.x, y: p.y, z: p.z, a }
+    if (!moved && a === last.a && n === last.n && now - lastSentAt < 1000) return
+    last = { x: p.x, y: p.y, z: p.z, a, n }
     lastSentAt = now
-    room.send('pos', { x: p.x, y: p.y, z: p.z, r: runtime.player.yaw, a })
+    room.send('pos', { x: p.x, y: p.y, z: p.z, r: runtime.player.yaw, a, n })
   }, 1000 / POSITION_HZ)
 
   room.onDrop(() => getGame().setNet({ mode: 'connecting', message: 'Reconnecting…' }))
   room.onReconnect(syncLobby)
   room.onLeave((code) => {
     clearInterval(posId)
+    sendLook = () => {}
     clearRemotePlayers()
     if (leaving || code === DUPLICATE_LOGIN) {
       getGame().setNet({ mode: 'offline', message: 'Disconnected' })

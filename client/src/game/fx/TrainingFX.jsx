@@ -74,7 +74,10 @@ export function TrainingFX() {
     drainTrainFx((event) => {
       // A new swing once the last one has let go; quick clicks before that ride along
       // on the swing already under way.
-      if (player.throwTimer <= THROW_TIME * (1 - RELEASE_AT)) player.throwTimer = THROW_TIME
+      if (player.throwTimer <= THROW_TIME * (1 - RELEASE_AT)) {
+        player.throwTimer = THROW_TIME
+        player.throwSeq += 1
+      }
       const shot = shots.current.find((s) => !s.active) || shots.current[0]
       if (event.lane >= 0) {
         shot.to.fromArray(targetPoint(event.lane))

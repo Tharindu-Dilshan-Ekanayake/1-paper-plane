@@ -1,4 +1,16 @@
-import { Box3, Matrix4, NearestFilter, Quaternion, SRGBColorSpace, Vector3 } from 'three'
+import {
+  Box3,
+  BufferAttribute,
+  BufferGeometry,
+  Matrix4,
+  MeshLambertMaterial,
+  NearestFilter,
+  Quaternion,
+  SkinnedMesh,
+  SRGBColorSpace,
+  Vector3,
+} from 'three'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
 import { BACK_BONE, HAT_BONE, NECK_OFFSET_BONE, PART_SLOTS } from '../bloxity/avatarAssets'
 import { computePose, POSED_BONES } from './playerPose'
@@ -235,6 +247,75 @@ export function applyPart(rig, slot, partScene) {
   }
 
   targetMesh.geometry = geometry
+}
+
+/** What the merged body keeps of each part, and each attribute's size. */
+const BODY_ATTRIBUTES = [
+  ['position', 3],
+  ['normal', 3],
+  ['uv', 2],
+  ['skinIndex', 4],
+  ['skinWeight', 4],
+]
+
+/**
+ * A part's geometry as plain, non-indexed float attributes: parts come from different
+ * GLBs (indexed or not, interleaved or not, 8- or 16-bit skin indices), and only
+ * matching layouts merge.
+ */
+function plainGeometry(source) {
+  const g = source.index ? source.toNonIndexed() : source.clone()
+  if (!g.getAttribute('normal')) g.computeVertexNormals()
+  const count = g.getAttribute('position').count
+  const out = new BufferGeometry()
+  for (const [name, size] of BODY_ATTRIBUTES) {
+    const attr = g.getAttribute(name)
+    const array = new Float32Array(count * size)
+    if (attr) {
+      for (let i = 0; i < count; i += 1) {
+        for (let k = 0; k < size; k += 1) array[i * size + k] = attr.getComponent(i, k)
+      }
+    } else if (name === 'skinWeight') {
+      // An unskinned part follows its first bone fully.
+      for (let i = 0; i < count; i += 1) array[i * 4] = 1
+    }
+    out.setAttribute(name, new BufferAttribute(array, size))
+  }
+  g.dispose()
+  return out
+}
+
+/**
+ * Merges the six body parts into one skinned mesh on the same skeleton, so a whole
+ * character is one draw call instead of six. The parts stay (hidden) as the source for
+ * the next re-assembly. Call after the parts and skin are applied; returns the body,
+ * or null if there's nothing to merge.
+ */
+export function mergeBody(rig) {
+  const parts = rig.skinnedMeshes
+  if (!rig.skeleton || parts.length === 0) return null
+  const pieces = parts.map((mesh) => plainGeometry(mesh.geometry))
+  const geometry = mergeGeometries(pieces, false)
+  for (const piece of pieces) piece.dispose()
+  if (!geometry) return null
+  const body = new SkinnedMesh(geometry, new MeshLambertMaterial({ map: parts[0].material?.map ?? null }))
+  body.name = 'merged_body'
+  body.castShadow = true
+  body.receiveShadow = true
+  // Skinned bounds don't follow the pose; the avatar is always near the camera anyway.
+  body.frustumCulled = false
+  parts[0].parent.add(body)
+  body.bind(rig.skeleton, parts[0].bindMatrix)
+  for (const mesh of parts) mesh.visible = false
+  return body
+}
+
+/** Removes and frees a body made by mergeBody. */
+export function disposeMergedBody(body) {
+  if (!body) return
+  body.parent?.remove(body)
+  body.geometry.dispose()
+  body.material.dispose()
 }
 
 /**

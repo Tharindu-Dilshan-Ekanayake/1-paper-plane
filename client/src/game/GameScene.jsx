@@ -12,6 +12,7 @@ import FollowCamera from './FollowCamera'
 import TrainingFX from './fx/TrainingFX'
 import WorldLabels from './labels/WorldLabels'
 import Pets, { RewardCrab, SphinxShowcase } from './pets/Pets'
+import RemoteAvatars from './remote/RemoteAvatars'
 import RemotePlayers from './remote/RemotePlayers'
 import Particles from './fx/Particles'
 import Leaderboards from './world/Leaderboards'
@@ -182,6 +183,7 @@ export function GameScene({ onReady }) {
         <RewardCrab />
         <Pets />
         <RemotePlayers />
+        <RemoteAvatars />
         <Player />
         <BlobShadows />
         <TrainingFX />

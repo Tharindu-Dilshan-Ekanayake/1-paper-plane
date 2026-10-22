@@ -25,6 +25,15 @@ export function upsertRemotePlayer(sessionId, state) {
       speed: 0,
       anim: 'idle',
       planeId: 'paper',
+      /** Their avatar's outfit, parsed from `look`; `lookKey` is the raw string. */
+      look: null,
+      lookKey: '',
+      /** Throw count as last seen; the renderer plays a throw for each new one. */
+      throws: state.throws,
+      seenThrows: state.throws,
+      throwT: 0,
+      catchT: 0,
+      frisbeeAway: false,
       petIds: [],
       /** Follow state per equipped pet, grown as needed and reused. */
       pets: [],
@@ -37,6 +46,15 @@ export function upsertRemotePlayer(sessionId, state) {
   r.name = state.name
   r.anim = state.anim
   r.planeId = state.planeId
+  r.throws = state.throws
+  if (state.look !== r.lookKey) {
+    r.lookKey = state.look
+    try {
+      r.look = state.look ? JSON.parse(state.look) : null
+    } catch {
+      r.look = null
+    }
+  }
   r.petIds = [...state.petIds]
   while (r.pets.length < r.petIds.length) {
     r.pets.push({ id: '', position: r.position.clone(), yaw: 0, hop: 0 })
