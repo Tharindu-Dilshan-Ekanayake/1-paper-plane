@@ -11,7 +11,11 @@ import TrainingFX from './fx/TrainingFX'
 import WorldLabels from './labels/WorldLabels'
 import Pets, { RewardCrab, SphinxShowcase } from './pets/Pets'
 import RemotePlayers from './remote/RemotePlayers'
+import Particles from './fx/Particles'
+import Leaderboards from './world/Leaderboards'
 import PlaneShop from './world/PlaneShop'
+import Portal from './world/Portal'
+import TutorialArrows from './world/TutorialArrows'
 import Lighting from './Lighting'
 import PerfProbe from './PerfProbe'
 import Player from './Player'
@@ -138,6 +142,10 @@ export function GameScene({ onReady }) {
         <World />
         <WorldLabels />
         <PlaneShop />
+        <Portal />
+        <Leaderboards />
+        <TutorialArrows />
+        <Particles />
         <SphinxShowcase />
         <RewardCrab />
         <Pets />

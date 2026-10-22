@@ -1,6 +1,13 @@
+import { sfx } from '../audio/sfx'
 import { beginFlight } from '../game/flight/flightControl'
-import { queueTrainFx } from '../game/fx/fxQueue'
+import { burst, queueTrainFx } from '../game/fx/fxQueue'
+import { runtime } from '../game/runtime'
 import { getGame } from '../store/game'
+
+const atPlayer = (dy = 1.2) => {
+  const p = runtime.player.position
+  return { x: p.x, y: p.y + dy, z: p.z }
+}
 
 /**
  * Applies one authority event to the client: updates the store and kicks off any
@@ -9,9 +16,19 @@ import { getGame } from '../store/game'
 export function handleServerEvent(type, payload) {
   const game = getGame()
   switch (type) {
-    case 'profile':
+    case 'profile': {
+      const before = game.profile
       game.setProfile(payload.profile, payload.session)
+      // Celebrate the big moments, whatever caused them.
+      if (game.profileLoaded && payload.profile.rebirths > before.rebirths) {
+        sfx.rebirth()
+        burst({ ...atPlayer(), count: 60, speed: 9 })
+      } else if (game.profileLoaded && payload.profile.ownedPlanes.length > before.ownedPlanes.length) {
+        sfx.buy()
+        burst({ ...atPlayer(2.5), count: 30, palette: 'gold' })
+      }
       break
+    }
 
     case 'train':
       game.patchProfile({
@@ -21,14 +38,25 @@ export function handleServerEvent(type, payload) {
         lastLane: payload.lane,
       })
       queueTrainFx(payload)
+      if (payload.leveledUp) {
+        sfx.levelUp()
+        burst({ ...atPlayer(1.8), count: 24, palette: 'power', speed: 6 })
+      }
       break
 
     case 'throw':
+      sfx.throw()
       beginFlight(payload)
       break
 
     case 'hatch':
       game.setHatch({ eggId: payload.eggId, pets: payload.pets, id: Date.now() })
+      if (payload.eggId) {
+        setTimeout(sfx.crack, 1100)
+        setTimeout(sfx.reveal, 1250)
+      } else {
+        sfx.reveal()
+      }
       break
 
     case 'offline':
@@ -37,10 +65,12 @@ export function handleServerEvent(type, payload) {
 
     case 'toast':
       game.toast(payload.text, payload.kind)
+      if (payload.kind === 'error') sfx.error()
       break
 
     case 'badge':
       game.toast(`Badge Awarded! You won the "${payload.name}" badge!`, 'badge', 5000)
+      sfx.wins()
       break
 
     default:

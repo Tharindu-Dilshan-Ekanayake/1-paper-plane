@@ -1,4 +1,4 @@
-import { EGGS, ITEMS, LANES, MULTI_HATCH, PLANES, PRODUCTS, TRAIN_INTERVAL } from './balance.js'
+import { EGGS, ITEMS, LANES, MULTI_HATCH, PLANES, PRODUCTS, TRAIN_INTERVAL, WORLD2_POWER } from './balance.js'
 import {
   advanceTutorial,
   applyRebirth,
@@ -23,7 +23,7 @@ import {
   unequipPet,
   usePotion,
 } from './logic.js'
-import { eggStandNear, FREE_REWARD, inRect, inThrowArea, laneRect, PLANE_PADS, padRect } from './world.js'
+import { eggStandNear, FREE_REWARD, inRect, inThrowArea, laneRect, PLANE_PADS, padRect, PORTAL } from './world.js'
 
 const PLANES_INDEX = Object.fromEntries(PLANES.map((p, i) => [p.id, i]))
 
@@ -254,6 +254,14 @@ export class PlayerSession {
       if (Math.hypot(p.x - FREE_REWARD.x, p.z - FREE_REWARD.z) > FREE_REWARD.radius + 1.5) return
       const result = this.fail(claimFreeReward(this.profile, this.session))
       this.afterReward(result)
+    },
+
+    portal() {
+      const p = this.getPosition()
+      if (Math.hypot(p.x - PORTAL.x, p.z - PORTAL.z) > PORTAL.radius + 2) return
+      if (this.profile.power < WORLD2_POWER) return
+      this.badge('world2')
+      this.toast('World 2 is coming soon - you made it this far!', 'success')
     },
 
     usePotion({ itemId }, now) {

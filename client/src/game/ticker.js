@@ -8,6 +8,7 @@ import {
   laneRect,
   padAt,
   PORTAL,
+  SPHINX_STAND,
 } from '@shared/world'
 
 import { actions } from '../net/actions'
@@ -21,6 +22,8 @@ const AUTO_THROW_GAP_MS = 1200
 function sameZone(a, b) {
   return (
     a.lane === b.lane &&
+    a.laneNear === b.laneNear &&
+    a.sphinx === b.sphinx &&
     a.throwArea === b.throwArea &&
     a.pad === b.pad &&
     a.egg === b.egg &&
@@ -61,13 +64,19 @@ export function startGameTicker() {
     const egg = eggStandNear(p.x, p.z)
     const zone = {
       lane: laneAt(p.x, p.z, -0.2),
+      // Standing at a lane's edge (a locked lane's wall stops you there).
+      laneNear: laneAt(p.x, p.z, 1.3),
+      sphinx: Math.hypot(p.x - SPHINX_STAND.x, p.z - SPHINX_STAND.z) < 5.5,
       throwArea: inThrowArea(p.x, p.z),
       pad: padAt(p.x, p.z),
       egg: egg ? egg.eggId : null,
       portal: Math.hypot(p.x - PORTAL.x, p.z - PORTAL.z) < PORTAL.radius,
       freeReward: Math.hypot(p.x - FREE_REWARD.x, p.z - FREE_REWARD.z) < FREE_REWARD.radius,
     }
-    if (!sameZone(zone, game.zone)) game.setZone(zone)
+    if (!sameZone(zone, game.zone)) {
+      if (zone.portal && !game.zone.portal) actions.portal()
+      game.setZone(zone)
+    }
 
     if (zone.lane !== lastLane) {
       if (zone.lane >= 0 && isLaneUnlocked(game.profile, zone.lane)) actions.enterLane(zone.lane)

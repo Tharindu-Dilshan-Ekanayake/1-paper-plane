@@ -30,7 +30,6 @@ export const PRESETS = {
     labelDistance: 70,
     /** How much of the track's side scenery to spawn (0-1). */
     decorDensity: 0.45,
-    leaderboards: false,
   },
   MEDIUM: {
     dpr: 1.25,
@@ -47,7 +46,6 @@ export const PRESETS = {
     remoteNameDistance: 28,
     labelDistance: 110,
     decorDensity: 0.75,
-    leaderboards: true,
   },
   HIGH: {
     dpr: 1.5,
@@ -64,7 +62,6 @@ export const PRESETS = {
     remoteNameDistance: 35,
     labelDistance: 150,
     decorDensity: 1,
-    leaderboards: true,
   },
 }
 

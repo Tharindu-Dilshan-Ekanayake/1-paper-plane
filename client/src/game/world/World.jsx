@@ -1,13 +1,16 @@
+import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useState } from 'react'
 
 import { useQuality } from '../../store/quality'
 import { BlockSet, disposeBlocks, PropBuilder } from '../blocks'
-import { createToyMaterial, sharedMaterials } from '../materials'
+import { createToyMaterial, sharedMaterials, toyTime } from '../materials'
 import { createGroundGeometry, createGroundMap } from './ground'
 import { buildEggStands } from './eggs'
+import { buildPortalFrame } from './portalFrame'
 import { buildHangar, buildLanes } from './structures'
 import { buildTargets } from './targets'
 import { createThrowAreaDecal } from './throwArea'
+import { buildWaterfall } from './waterfall'
 import { buildTerrain } from './terrain'
 
 /**
@@ -21,6 +24,11 @@ import { buildTerrain } from './terrain'
 export function World() {
   const shadows = useQuality((s) => s.settings.shadows === 'realtime')
   const [decal, setDecal] = useState(null)
+
+  // Drives every animated toy-material style (water...).
+  useFrame((state) => {
+    toyTime.value = state.clock.elapsedTime
+  })
 
   useEffect(() => {
     let made = null
@@ -51,6 +59,8 @@ export function World() {
     buildTerrain(set, { treeDensity: decorDensity })
     buildLanes(set)
     buildHangar(set)
+    buildPortalFrame(set)
+    buildWaterfall(set)
 
     const propBuilder = new PropBuilder()
     buildTargets(propBuilder)

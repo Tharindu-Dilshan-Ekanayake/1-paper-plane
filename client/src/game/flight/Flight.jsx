@@ -25,6 +25,7 @@ import { trophyValue, winsMultiplier, zoneIndexAt } from '@shared/logic'
 import { mulberry32 } from '@shared/rng'
 import { THROW_LINE_Z } from '@shared/world'
 
+import { sfx } from '../../audio/sfx'
 import { getGame } from '../../store/game'
 import { getQuality, useQuality } from '../../store/quality'
 import { iconUrl } from '../../ui/icons'
@@ -291,6 +292,7 @@ export default function Flight() {
         if (collected.current.has(m)) continue
         collected.current.add(m)
         spawnPopup(`+${formatNumber(Math.round(trophyValue(m) * multiplier))}`, { x: _prevPlane.x, y: _prevPlane.y + 1, z: _prevPlane.z - 2 }, { iconUrl: iconUrl('trophy'), scale: 1.2 })
+        sfx.trophy()
       }
     }
     const trophies = trophyRef.current

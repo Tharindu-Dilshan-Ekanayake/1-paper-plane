@@ -1,6 +1,6 @@
-import { EGGS, LANES, PETS, PLANES, PRODUCTS } from '@shared/balance'
+import { EGGS, LANES, PETS, PLANES, PRODUCTS, WORLD2_POWER } from '@shared/balance'
 import { formatNumber } from '@shared/format'
-import { EGG_STANDS, FREE_REWARD, LANE_TARGET_Z, laneCenterX, PLANE_PADS, SPHINX_STAND } from '@shared/world'
+import { EGG_STANDS, FREE_REWARD, LANE_TARGET_Z, laneCenterX, PLANE_PADS, PORTAL, SPHINX_STAND } from '@shared/world'
 
 import { eggHeight } from '../world/eggs'
 import { LANE_THEMES } from '../world/structures'
@@ -142,7 +142,20 @@ const freeRewardLabel = () => ({
   fade: 90,
 })
 
-/** Every label in the lobby. Areas add theirs as their phases land. */
+const portalLabel = () => ({
+  id: 'portal',
+  position: [PORTAL.x, PORTAL.radius * 2 + 2.8, PORTAL.z],
+  spec: {
+    lines: [
+      { text: 'World 2', size: 58, gradient: TEXT.blue },
+      { text: `Needs ${formatNumber(WORLD2_POWER)} Power`, size: 42, icon: 'muscle', gradient: TEXT.gold },
+    ],
+    pxPerUnit: 56,
+  },
+  fade: 140,
+})
+
+/** Every label in the lobby. */
 export function lobbyLabels(profile, { sphinxStock = 0 } = {}) {
-  return [...laneLabels(), ...padLabels(profile), ...eggLabels(), sphinxLabel(sphinxStock), freeRewardLabel()]
+  return [...laneLabels(), ...padLabels(profile), ...eggLabels(), sphinxLabel(sphinxStock), freeRewardLabel(), portalLabel()]
 }

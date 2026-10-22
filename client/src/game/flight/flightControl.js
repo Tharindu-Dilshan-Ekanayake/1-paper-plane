@@ -1,4 +1,6 @@
+import { sfx } from '../../audio/sfx'
 import { getGame } from '../../store/game'
+import { burst } from '../fx/fxQueue'
 import { THROW_ANIM } from '../fx/TrainingFX'
 import { runtime } from '../runtime'
 
@@ -52,6 +54,11 @@ export function beginFlight(result) {
 
   timers.push(
     setTimeout(() => {
+      sfx.wins()
+      if (runtime.flightFocus) {
+        const f = runtime.flightFocus
+        burst({ x: f.x, y: f.y + 0.5, z: f.z - 3, count: 40, palette: 'gold', speed: 8 })
+      }
       game.endFlight()
       timers.push(setTimeout(finishFlight, RESULT_HOLD_MS))
     }, result.duration * 1000),

@@ -4,6 +4,7 @@ import { DoubleSide, InstancedMesh, Matrix4, MeshLambertMaterial, Quaternion, Ve
 
 import { formatNumber } from '@shared/format'
 
+import { sfx } from '../../audio/sfx'
 import { getGame } from '../../store/game'
 import { iconUrl } from '../../ui/icons'
 import { PAPER_PLANE } from '../geometry'
@@ -107,6 +108,7 @@ export function TrainingFX() {
           player.position.z + (Math.random() - 0.5) * 1.5,
         )
         spawnPopup(`+${formatNumber(shot.gain)} POWER`, _popupAt, { iconUrl: iconUrl('muscle') })
+        sfx.power()
         if (shot.leveledUp) {
           _popupAt.set(player.position.x, player.position.y + 2.6, player.position.z)
           spawnPopup('LEVEL UP!', _popupAt, { gradient: LEVEL_GRADIENT, scale: 1.5, life: 1600 })

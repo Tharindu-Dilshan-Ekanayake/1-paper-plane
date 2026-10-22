@@ -39,6 +39,7 @@ export const actions = {
   claimPlaytime: (index) => send('claimPlaytime', { index }),
   claimFreeReward: () => send('claimFreeReward'),
   setSetting: (key, value) => send('setting', { key, value }),
+  portal: () => send('portal'),
   /** Premium purchase; see premium.js for the payment flow in front of this. */
   purchase: (productId) => send('purchase', { productId }),
 }

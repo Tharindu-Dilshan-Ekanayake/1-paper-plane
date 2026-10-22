@@ -34,7 +34,12 @@ export const STYLE = {
   GALAXY: 9,
   /** Asphalt with no studs but a fine grain. */
   ROAD: 10,
+  /** Falling water: bright streaks scrolling down. */
+  WATER: 11,
 }
+
+/** Shared clock for animated styles; WorldClock advances it once per frame. */
+export const toyTime = { value: 0 }
 
 /** Cap colour for STYLE.TERRAIN blocks; the instance colour is the dirt underneath. */
 export const GRASS_COLOR = new Color('#4fd93a')
@@ -65,6 +70,7 @@ const vertexBody = /* glsl */ `
 
 const fragmentHead = /* glsl */ `
   uniform float uStudScale;
+  uniform float uTime;
   uniform vec3 uGrass;
   varying vec3 vToyPos;
   varying vec3 vToyNormal;
@@ -168,8 +174,15 @@ const fragmentBody = /* glsl */ `
       star *= 1.0 - smoothstep(0.05, 0.15, length(f));
       col = mix(col, vec3(1.0), star);
       totalEmissiveRadiance += col * 0.35 + star * 0.6;
-    } else {
+    } else if (style < 11.0) {
       col *= 0.94 + 0.06 * toyHash(floor(suv * 3.0));
+    } else {
+      // Water: streaks falling down the sides, ripples on top.
+      float lane = floor(suv.x * 2.0);
+      float fall = fract(vToyPos.y * 0.35 + uTime * (1.2 + toyHash(vec2(lane, 1.0)) * 0.6) + toyHash(vec2(lane, 7.0)));
+      float streak = isTop ? 0.5 + 0.5 * sin(vToyPos.x * 2.0 + vToyPos.z * 1.3 + uTime * 3.0) : smoothstep(0.7, 1.0, fall);
+      col = mix(col, vec3(0.92, 0.98, 1.0), streak * 0.65);
+      totalEmissiveRadiance += col * 0.25;
     }
 
     diffuseColor.rgb = col;
@@ -195,6 +208,7 @@ export function createToyMaterial({
 
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uStudScale = { value: studScale }
+    shader.uniforms.uTime = toyTime
     shader.uniforms.uGrass = { value: GRASS_COLOR }
     material.userData.shader = shader
 
@@ -206,7 +220,7 @@ export function createToyMaterial({
       .replace('#include <color_fragment>', `#include <color_fragment>\n${fragmentBody}`)
   }
   // The stud scale is a uniform, so materials differing only in it share a program.
-  material.customProgramCacheKey = () => 'toy-v1'
+  material.customProgramCacheKey = () => 'toy-v2'
   return material
 }
 

@@ -38,7 +38,7 @@ export const useGame = create((set, get) => ({
   leaderboards: null,
 
   /** Where the player is standing, from the ticker. */
-  zone: { lane: -1, throwArea: false, pad: -1, egg: null, portal: false, freeReward: false },
+  zone: { lane: -1, laneNear: -1, throwArea: false, pad: -1, egg: null, portal: false, freeReward: false, sphinx: false },
 
   /** Which modal panel is open: 'rebirth' | 'daily' | 'pets' | 'items' | 'store' | ... */
   panel: null,

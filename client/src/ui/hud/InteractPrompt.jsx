@@ -1,10 +1,12 @@
 import { useEffect } from 'react'
 
-import { PLANES } from '@shared/balance'
+import { LANES, PLANES, PRODUCTS, WORLD2_POWER } from '@shared/balance'
 import { formatNumber } from '@shared/format'
+import { isLaneUnlocked } from '@shared/logic'
 
 import { padState } from '../../game/labels/lobbyLabels'
 import { actions } from '../../net/actions'
+import { purchase } from '../../net/premium'
 import { useGame } from '../../store/game'
 import { u } from './style'
 
@@ -18,6 +20,30 @@ function usePrompt() {
   const equipped = useGame((s) => s.profile.equippedPlane)
   const atFreeReward = useGame((s) => s.zone.freeReward)
   const freeTaken = useGame((s) => s.session.freeRewardTaken)
+  const laneNear = useGame((s) => s.zone.laneNear)
+  const laneLocked = useGame((s) => s.zone.laneNear >= 0 && !isLaneUnlocked(s.profile, s.zone.laneNear))
+  const atSphinx = useGame((s) => s.zone.sphinx)
+  const atPortal = useGame((s) => s.zone.portal)
+  const power = useGame((s) => s.profile.power)
+
+  if (atPortal) {
+    return power >= WORLD2_POWER
+      ? { title: 'World 2', action: 'Coming soon!', run: null }
+      : { title: 'World 2', action: `Needs ${formatNumber(WORLD2_POWER)} Power (you have ${formatNumber(power)})`, run: null }
+  }
+
+  if (atSphinx) {
+    return { title: 'Sphinx - Limited!', action: `Buy - ${PRODUCTS.sphinx.price} Bux`, run: () => purchase('sphinx') }
+  }
+
+  if (laneLocked) {
+    const lane = LANES[laneNear]
+    if (lane.product) {
+      return { title: `${lane.name} - x${lane.mult} Power`, action: `Unlock - ${PRODUCTS[lane.product].price} Bux`, run: () => purchase(lane.product) }
+    }
+    const word = lane.rebirths === 1 ? 'Rebirth' : 'Rebirths'
+    return { title: `${lane.name} - x${lane.mult} Power`, action: `Locked: needs ${lane.rebirths} ${word}`, run: null }
+  }
 
   if (atFreeReward) {
     return freeTaken

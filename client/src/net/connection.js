@@ -1,5 +1,3 @@
-import { Callbacks, Client } from '@colyseus/sdk'
-
 import { runtime } from '../game/runtime'
 import { getGame } from '../store/game'
 import { setTransport } from './actions'
@@ -57,7 +55,7 @@ function join(client, options, lobby) {
 }
 
 /** Wires a joined room into the game: events, other players, position reports. */
-function attachRoom(room, identity) {
+function attachRoom(room, identity, Callbacks) {
   const game = getGame()
   const callbacks = Callbacks.get(room)
   let leaving = false
@@ -184,6 +182,10 @@ export async function startConnection(identity, lobby = { mode: 'public' }) {
     return
   }
 
+  // Loaded on demand: offline play never downloads the networking code, and online play
+  // fetches it in parallel with the lobby rather than in front of it.
+  const { Client, Callbacks } = await import('@colyseus/sdk')
+  if (gen !== generation) return
   const client = new Client(url)
   const options = { playerId: identity.id, name: identity.name }
   for (let attempt = 0; attempt <= JOIN_RETRIES; attempt += 1) {
@@ -194,7 +196,7 @@ export async function startConnection(identity, lobby = { mode: 'public' }) {
         room.leave(true)
         return
       }
-      attachRoom(room, identity)
+      attachRoom(room, identity, Callbacks)
       return
     } catch (err) {
       if (gen !== generation) return

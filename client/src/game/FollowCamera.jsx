@@ -2,7 +2,22 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import { Vector3 } from 'three'
 
+import { HANGAR, inRect } from '@shared/world'
+
 import { runtime } from './runtime'
+
+/** Keeps the camera inside the hangar's shell while the player is in it. */
+function clampToHangar(target, desired) {
+  if (!inRect(HANGAR, target.x, target.z)) return
+  const midZ = (HANGAR.minZ + HANGAR.maxZ) / 2
+  const halfZ = (HANGAR.maxZ - HANGAR.minZ) / 2 - 1.2
+  desired.z = Math.min(midZ + halfZ, Math.max(midZ - halfZ, desired.z))
+  desired.x = Math.min(HANGAR.maxX - 1.2, desired.x)
+  // Under the curved roof: the half-ellipse's height at this depth, less a margin.
+  const t = Math.min(1, Math.abs(desired.z - midZ) / (halfZ + 1.2))
+  const roof = HANGAR.height * Math.sqrt(1 - t * t) - 1
+  desired.y = Math.min(desired.y, Math.max(2, roof))
+}
 
 /** How high above the player's feet the camera aims. */
 const LOOK_HEIGHT = 1.6
@@ -133,6 +148,7 @@ export function FollowCamera() {
       Math.max(_target.y + Math.sin(pitch) * distance, 0.6),
       _target.z + Math.cos(yaw) * horizontal,
     )
+    clampToHangar(_target, _desired)
 
     // After a flight the camera is kilometres away; jump back rather than swoop.
     if (runtime.camera.snap) {
