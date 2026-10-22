@@ -1,6 +1,7 @@
 import { useGame } from '../../store/game'
 import AutoRebirthToggle from './AutoRebirthToggle'
 import FlightOverlay from './FlightOverlay'
+import InteractPrompt from './InteractPrompt'
 import LeftMenu from './LeftMenu'
 import PowerBar from './PowerBar'
 import RightButtons from './RightButtons'
@@ -33,6 +34,7 @@ export function HUD() {
         <PowerBar />
         {!watching && <AutoRebirthToggle />}
         <ThrowButton />
+        <InteractPrompt />
         <FlightOverlay />
       </div>
       <Toasts />

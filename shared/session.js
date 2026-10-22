@@ -1,22 +1,29 @@
-import { LANES, PRODUCTS, TRAIN_INTERVAL } from './balance.js'
+import { LANES, PLANES, PRODUCTS, TRAIN_INTERVAL } from './balance.js'
 import {
   advanceTutorial,
   applyRebirth,
   applyThrow,
   applyTrain,
   awardBadge,
+  buyPlane,
   createSession,
+  equipPlane,
   friendBoost,
   grantProduct,
   isLaneUnlocked,
   isMaxLevel,
+  planeById,
 } from './logic.js'
-import { inRect, inThrowArea, laneRect } from './world.js'
+import { inRect, inThrowArea, laneRect, PLANE_PADS, padRect } from './world.js'
+
+const PLANES_INDEX = Object.fromEntries(PLANES.map((p, i) => [p.id, i]))
 
 /** How far outside a lane's floor still counts as "in" it (network jitter). */
 const LANE_SLACK = 0.8
 /** Same for the throw area. */
 const THROW_SLACK = 1.5
+/** Pads are bought by standing on them; allow for a little lag. */
+const PAD_SLACK = 2
 
 /**
  * One player's authoritative session: validates intents, runs the training tick and
@@ -161,6 +168,27 @@ export class PlayerSession {
       if (result.distance >= 1000) this.badge('kilometer')
     },
 
+    buyPlane({ id }) {
+      if (!this.nearPadFor(id)) {
+        this.toast('Stand on the plane’s pad in the Hangar to buy it', 'error')
+        return
+      }
+      const result = this.fail(buyPlane(this.profile, id))
+      if (!result.ok) return
+      this.dirty = true
+      if (result.bought) {
+        this.tutorial('buyPlane')
+        this.toast(`Bought the ${planeById(id).name}! +${planeById(id).power} Power per throw`, 'success')
+      } else {
+        this.toast(`Equipped the ${planeById(id).name}`, 'success')
+      }
+    },
+
+    equipPlane({ id }) {
+      const result = this.fail(equipPlane(this.profile, id))
+      if (result.ok) this.dirty = true
+    },
+
     purchase({ productId }, now) {
       if (!this.mockPurchases) {
         this.toast('Purchases are coming soon!')
@@ -207,6 +235,15 @@ export class PlayerSession {
 
   friends() {
     return this.getFriends()
+  }
+
+  /** Whether the player stands on (or right by) the pad for plane `id`. */
+  nearPadFor(id) {
+    const index = PLANES_INDEX[id]
+    const pad = PLANE_PADS[index]
+    if (!pad) return false
+    const p = this.getPosition()
+    return inRect(padRect(pad), p.x, p.z, PAD_SLACK)
   }
 
   /** Whether the player is really standing in the lane they claim. */

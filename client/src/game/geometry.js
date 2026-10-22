@@ -62,5 +62,30 @@ export function createPaperPlaneGeometry() {
   return g
 }
 
-/** Shared instance, for every paper plane in the game. */
+/**
+ * Coloured stripes over the outer part of each wing, drawn on top of the plane in its
+ * trim colour, so planes differ by more than tint.
+ */
+export function createPlaneTrimGeometry() {
+  const lerp = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t)
+  const lift = (v) => [v[0], v[1] + 0.012, v[2]]
+  const nose = [0, 0, 0.5]
+  const tailTop = [0, 0.02, -0.5]
+  const tris = []
+  for (const tip of [
+    [-0.36, 0.09, -0.5],
+    [0.36, 0.09, -0.5],
+  ]) {
+    tris.push([lift(lerp(nose, tip, 0.45)), lift(tip), lift(lerp(tip, tailTop, 0.3))])
+  }
+  const positions = new Float32Array(tris.length * 9)
+  tris.forEach((tri, i) => tri.forEach((v, k) => positions.set(v, i * 9 + k * 3)))
+  const g = new BufferGeometry()
+  g.setAttribute('position', new BufferAttribute(positions, 3))
+  g.computeVertexNormals()
+  return g
+}
+
+/** Shared instances, for every paper plane in the game. */
 export const PAPER_PLANE = createPaperPlaneGeometry()
+export const PLANE_TRIM = createPlaneTrimGeometry()

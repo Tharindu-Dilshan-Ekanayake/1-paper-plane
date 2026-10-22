@@ -1,5 +1,6 @@
-import { LANES, PRODUCTS } from '@shared/balance'
-import { LANE_TARGET_Z, laneCenterX } from '@shared/world'
+import { LANES, PLANES, PRODUCTS } from '@shared/balance'
+import { formatNumber } from '@shared/format'
+import { LANE_TARGET_Z, laneCenterX, PLANE_PADS } from '@shared/world'
 
 import { LANE_THEMES } from '../world/structures'
 
@@ -44,7 +45,50 @@ export function laneLabels() {
   }))
 }
 
-/** Every static label in the lobby. Areas add theirs as their phases land. */
-export function lobbyLabels() {
-  return [...laneLabels()]
+/** Ownership state of each hangar pad: 'equipped' | 'owned' | 'buy' | 'locked'. */
+export function padState(profile, index) {
+  const plane = PLANES[index]
+  if (profile.equippedPlane === plane.id) return 'equipped'
+  if (profile.ownedPlanes.includes(plane.id)) return 'owned'
+  const previous = PLANES[index - 1]
+  return !previous || profile.ownedPlanes.includes(previous.id) ? 'buy' : 'locked'
+}
+
+/** "+5 / Power" over "28 Wins", "OWNED" or "EQUIPPED". */
+export function padLabelSpec(index, state) {
+  const plane = PLANES[index]
+  const status =
+    state === 'equipped'
+      ? { text: 'EQUIPPED', size: 40, gradient: TEXT.gold }
+      : state === 'owned'
+        ? { text: 'OWNED', size: 40, gradient: TEXT.green }
+        : { text: `${formatNumber(plane.cost)} Wins`, size: 40, icon: 'trophy', gradient: state === 'locked' ? TEXT.red : TEXT.gold }
+  return {
+    lines: [{ text: `+${formatNumber(plane.power)} / Power`, size: 38, icon: 'plane', fill: '#ffffff' }, status],
+    pxPerUnit: 70,
+  }
+}
+
+/** Largest a pad label can get, so its atlas slot fits every state. */
+const padReserve = (index) => ({
+  lines: [
+    { text: `+${formatNumber(PLANES[index].power)} / Power`, size: 38, icon: 'plane' },
+    { text: `${formatNumber(PLANES[index].cost)} Wins`, size: 40, icon: 'trophy' },
+  ],
+})
+
+export function padLabels(profile) {
+  return PLANE_PADS.map((pad) => ({
+    id: `pad-${pad.index}`,
+    // Back-row labels ride higher so they clear the front row seen from the entrance.
+    position: [pad.x, pad.y + (pad.y > 0 ? 6.4 : 4.6), pad.z],
+    spec: padLabelSpec(pad.index, padState(profile, pad.index)),
+    reserve: padReserve(pad.index),
+    fade: 70,
+  }))
+}
+
+/** Every label in the lobby. Areas add theirs as their phases land. */
+export function lobbyLabels(profile) {
+  return [...laneLabels(), ...padLabels(profile)]
 }
