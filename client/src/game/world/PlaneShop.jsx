@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { Color, Matrix4, Quaternion, Vector3 } from 'three'
 
 import { PLANES } from '@shared/balance'
-import { HANGAR, HANGAR_STEP, PAD_SIZE, PLANE_PADS } from '@shared/world'
+import { PAD_SIZE, PLANE_PADS, SHOP_STAGES } from '@shared/world'
 
 import { useGame } from '../../store/game'
 import { getQuality } from '../../store/quality'
@@ -59,10 +59,11 @@ function buildStands() {
     set.addOn(x, y + 0.2, z, 1.1, 1, 1.1, '#f4f7fb', STYLE.SMOOTH)
     set.addOn(x, y + 1.2, z, 1.5, CAP_TOP - 1.2, 1.5, frisbeeColor(id), STYLE.GLOW)
   }
-  // A red carpet down the aisle between the two rows, edged in gold.
-  const aisleX = (PLANE_PADS[0].x + PAD_SIZE / 2 + HANGAR_STEP.minX) / 2
-  const length = HANGAR.maxZ - HANGAR.minZ - 3
-  const midZ = (HANGAR.minZ + HANGAR.maxZ) / 2
+  // A red carpet down the aisle between the two stages, edged in gold.
+  const [front, back] = SHOP_STAGES
+  const aisleX = (front.maxX + back.minX) / 2
+  const length = front.maxZ - front.minZ
+  const midZ = (front.minZ + front.maxZ) / 2
   set.addOn(aisleX, 0, midZ, 2.4, 0.06, length, '#d8263a', STYLE.SMOOTH)
   for (const side of [-1, 1]) set.addOn(aisleX + side * 1.25, 0, midZ, 0.18, 0.1, length, '#ffd21f', STYLE.GLOW)
   return set.build(sharedMaterials().blocks)
@@ -70,9 +71,10 @@ function buildStands() {
 const _glow = new Vector3()
 
 /**
- * The frisbee shop: ten display stands, each a pad framed in white with a glowing
- * pedestal and its frisbee floating above it. Pads recolour and their labels rewrite as
- * you buy and equip; the frisbees spin slowly. Three draw calls: stands, frisbees, halos.
+ * The frisbee shop: twenty display stands on the two shop stages, each a pad framed in
+ * white with a glowing pedestal and its frisbee floating above it. Pads recolour and
+ * their labels rewrite as you buy and equip; the frisbees spin slowly. Three draw
+ * calls: stands, frisbees, halos.
  */
 export function PlaneShop() {
   const owned = useGame((s) => s.profile.ownedPlanes)

@@ -1,6 +1,4 @@
 import {
-  HANGAR,
-  HANGAR_STEP,
   LANE_COUNT,
   LANE_FAR_X,
   LANE_FLOOR_HEIGHT,
@@ -8,10 +6,11 @@ import {
   LANE_TARGET_X,
   LANE_WIDTH,
   laneCenterZ,
+  SHOP_BOARD,
+  SHOP_STAGES,
 } from '@shared/world'
 
 import { STYLE } from '../materials'
-import { PALETTE } from '../sceneStyle'
 
 /**
  * Static lobby structures, added as plain boxes to the world's shared BlockSet so they
@@ -59,63 +58,51 @@ export function buildLanes(blocks) {
   }
 }
 
+const WHITE = '#f4f7fb'
+const BLUE = '#2f7fe6'
+const NAVY = '#1f3c96'
+const SKY = '#7fe2ff'
+const GOLD = '#ffd21f'
+
 /**
- * The plane hangar: a white studded half-tube open to the west, with a blue frame
- * around the mouth, a stepped back wall and a raised back tier.
+ * The frisbee shop: two open display stages (the stands on them are PlaneShop's) and
+ * the big board behind, built like the throw stage - white decks on a blue band with
+ * light strips round the edges. `detail` (off on LOW) adds the board's bulbs.
+ *
+ * No two faces here share a plane: every layer stands a clear step proud of what it
+ * sits on.
  */
-export function buildHangar(blocks) {
-  const midZ = (HANGAR.minZ + HANGAR.maxZ) / 2
-  const radiusZ = (HANGAR.maxZ - HANGAR.minZ) / 2
-  const radiusY = HANGAR.height
-  const depth = HANGAR.maxX - HANGAR.minX
-  const midX = (HANGAR.minX + HANGAR.maxX) / 2
-  const segments = 16
-
-  const point = (t) => ({
-    z: midZ + Math.cos(t) * radiusZ,
-    y: Math.sin(t) * radiusY,
-  })
-
-  for (let s = 0; s < segments; s += 1) {
-    const a = point((s / segments) * Math.PI)
-    const b = point(((s + 1) / segments) * Math.PI)
-    const dz = b.z - a.z
-    const dy = b.y - a.y
-    const length = Math.hypot(dz, dy) + 0.25
-    const tilt = -Math.atan2(dy, dz)
-    const cz = (a.z + b.z) / 2
-    const cy = (a.y + b.y) / 2
-
-    // Shell.
-    blocks.add(midX, cy, cz, depth, 0.8, length, PALETTE.white, STYLE.STUDS, 0, tilt)
-    // Blue frame around the mouth, a little proud of the shell.
-    blocks.add(HANGAR.minX - 0.2, cy, cz, 1.4, 1.6, length, '#2f7fe6', STYLE.STUDS, 0, tilt)
-    // Light-blue stripe along the inside, like the reference's trim line.
-    if (s === 3 || s === segments - 4) {
-      blocks.add(midX, cy, cz, depth, 0.85, length * 0.6, '#3f8cf0', STYLE.SMOOTH, 0, tilt)
+export function buildShop(blocks, { detail = true } = {}) {
+  for (const s of SHOP_STAGES) {
+    const w = s.maxX - s.minX
+    const d = s.maxZ - s.minZ
+    const cx = (s.minX + s.maxX) / 2
+    const cz = (s.minZ + s.maxZ) / 2
+    blocks.addOn(cx, -0.1, cz, w, s.height + 0.1, d, WHITE)
+    blocks.addOn(cx, 0, cz, w + 0.3, s.height * 0.5, d + 0.3, BLUE)
+    // Light strips along all four top edges, and a gold post at each corner.
+    for (const side of [-1, 1]) {
+      blocks.addOn(cx + side * (w / 2 - 0.25), s.height, cz, 0.35, 0.08, d - 1.4, SKY, STYLE.GLOW)
+      blocks.addOn(cx, s.height, cz + side * (d / 2 - 0.25), w - 1.4, 0.08, 0.35, SKY, STYLE.GLOW)
+      for (const end of [-1, 1]) {
+        blocks.addOn(cx + side * (w / 2 - 0.35), s.height, cz + end * (d / 2 - 0.35), 0.6, 0.7, 0.6, GOLD, STYLE.GLOW)
+      }
     }
   }
 
-  // Back wall, stepped to fill the half-ellipse.
-  for (let y = 0; y < radiusY; y += 1) {
-    const t = Math.min(1, (y + 0.5) / radiusY)
-    const width = 2 * radiusZ * Math.sqrt(Math.max(0, 1 - t * t))
-    blocks.addOn(HANGAR.maxX + 0.5, y, midZ, 1, 1, width, '#dbe8f6')
+  // The board: two striped legs, a navy panel in a blue frame, a gold cap.
+  const { x, minZ, maxZ, top } = SHOP_BOARD
+  const length = maxZ - minZ
+  const midZ = (minZ + maxZ) / 2
+  const bottom = top - 8.2
+  for (const z of [minZ + 1.5, maxZ - 1.5]) blocks.addOn(x + 0.1, 0, z, 0.9, bottom + 0.3, 0.9, BLUE, STYLE.STRIPES)
+  blocks.addOn(x, bottom, midZ, 0.6, top - bottom, length, BLUE)
+  blocks.addOn(x - 0.1, bottom + 0.5, midZ, 0.6, top - bottom - 1, length - 1, NAVY, STYLE.SMOOTH)
+  blocks.addOn(x, top, midZ, 0.9, 0.4, length + 0.4, GOLD, STYLE.GLOW)
+  if (detail) {
+    for (let z = minZ + 1; z <= maxZ - 0.99; z += 1.5) {
+      blocks.add(x - 0.42, bottom + 0.25, z, 0.16, 0.3, 0.3, Math.round(z) % 2 ? '#ffffff' : GOLD, STYLE.GLOW)
+      blocks.add(x - 0.42, top - 0.25, z + 0.75, 0.16, 0.3, 0.3, Math.round(z) % 2 ? GOLD : '#ffffff', STYLE.GLOW)
+    }
   }
-
-  // Raised tier for the back row, navy-fronted like the reference.
-  const step = HANGAR_STEP
-  blocks.addOn(
-    (step.minX + step.maxX) / 2,
-    -0.1,
-    (step.minZ + step.maxZ) / 2,
-    step.maxX - step.minX,
-    step.height + 0.1,
-    step.maxZ - step.minZ,
-    '#e9f1fa',
-  )
-  // Navy front, proud of the tier on every side (flush faces would flicker).
-  blocks.addOn(step.minX + 0.25, -0.1, (step.minZ + step.maxZ) / 2, 0.6, step.height + 0.2, step.maxZ - step.minZ + 0.1, '#1f3c96')
-  // Navy display band along the back wall.
-  blocks.addOn(HANGAR.maxX - 0.2, step.height, midZ, 0.4, 2.2, radiusZ * 1.6, '#1f3c96')
 }

@@ -11,7 +11,7 @@ import {
 import {
   EGG_STANDS,
   FREE_REWARD,
-  HANGAR,
+  SHOP,
   LANE_COUNT,
   LANE_NEAR_X,
   LANE_TARGET_X,
@@ -83,13 +83,13 @@ export function createGroundMap(maxTexture) {
   bordered({ minX: LANE_TARGET_X - 3, maxX: LANE_NEAR_X + 3, minZ: lanesMinZ, maxZ: lanesMaxZ }, PALETTE.apron, PALETTE.apronEdge)
 
   // Paths: a walkway along the lane entrances, spawn to the stage steps, spawn to the
-  // lanes, the hangar, the eggs, and a spur up to the portal.
+  // lanes, the shop, the eggs, and a spur up to the portal.
   const eggsZ = EGG_STANDS[0].z
   const paths = [
     { minX: LANE_NEAR_X + 3, maxX: LANE_NEAR_X + 8, minZ: lanesMinZ, maxZ: lanesMaxZ },
     { minX: -5, maxX: 5, minZ: STAGE.maxZ, maxZ: 16 },
     { minX: LANE_NEAR_X + 3, maxX: -5, minZ: 11, maxZ: 17 },
-    { minX: 5, maxX: HANGAR.minX + 1, minZ: -12, maxZ: -6 },
+    { minX: 5, maxX: SHOP.minX + 1, minZ: -12, maxZ: -6 },
     { minX: 5, maxX: 46, minZ: eggsZ - 8, maxZ: eggsZ - 4 },
     { minX: PORTAL.x - 3, maxX: PORTAL.x + 3, minZ: PORTAL.z + 3, maxZ: -12 },
   ]
@@ -100,9 +100,9 @@ export function createGroundMap(maxTexture) {
   }
   bordered({ minX: -9, maxX: 9, minZ: 7, maxZ: 21 }, PALETTE.path, PALETTE.pathEdge)
 
-  // Egg plaza and the hangar floor.
+  // Egg plaza and the shop yard.
   bordered({ minX: 6, maxX: PLAZA.maxX - 1, minZ: eggsZ - 4, maxZ: LEADERBOARDS[0].z - 1 }, PALETTE.apron, PALETTE.apronEdge)
-  rect({ minX: HANGAR.minX, maxX: HANGAR.maxX, minZ: HANGAR.minZ, maxZ: HANGAR.maxZ }, PALETTE.hangarFloor)
+  rect({ minX: SHOP.minX, maxX: SHOP.maxX, minZ: SHOP.minZ, maxZ: SHOP.maxZ }, PALETTE.shopFloor)
 
   disc(PORTAL.x, PORTAL.z, 6, PALETTE.apronEdge)
   disc(PORTAL.x, PORTAL.z, 5, PALETTE.apron)

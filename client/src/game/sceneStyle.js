@@ -37,7 +37,7 @@ export const PALETTE = {
   pathEdge: '#e5a94f',
   apron: '#acdff5',
   apronEdge: '#e6f6fd',
-  hangarFloor: '#e7eef6',
+  shopFloor: '#e7eef6',
   lawn: '#66cf4b',
   sidewalk: '#dadada',
   dirt: '#c99a5f',

@@ -3,7 +3,6 @@ import { formatNumber } from '@shared/format'
 import {
   EGG_STANDS,
   FREE_REWARD,
-  HANGAR,
   LANE_TARGET_X,
   laneCenterZ,
   PLANE_PADS,
@@ -57,7 +56,7 @@ export function laneLabels() {
   }))
 }
 
-/** Ownership state of each hangar pad: 'equipped' | 'owned' | 'buy' | 'locked'. */
+/** Ownership state of each shop pad: 'equipped' | 'owned' | 'buy' | 'locked'. */
 export function padState(profile, index) {
   const plane = PLANES[index]
   if (profile.equippedPlane === plane.id) return 'equipped'
@@ -92,8 +91,8 @@ const padReserve = (index) => ({
 export function padLabels(profile) {
   return PLANE_PADS.map((pad) => ({
     id: `pad-${pad.index}`,
-    // Back-row labels ride higher so they clear the front row seen from the entrance.
-    position: [pad.x, pad.y + (pad.y > 0 ? 7.4 : 5.8), pad.z],
+    // Each row back rides higher, so they clear the rows in front seen from the plaza.
+    position: [pad.x, pad.y + 5.6 + pad.row * 1.25, pad.z],
     spec: padLabelSpec(pad.index, padState(profile, pad.index)),
     reserve: padReserve(pad.index),
     fade: 70,
@@ -153,14 +152,6 @@ const freeRewardLabel = () => ({
   fade: 90,
 })
 
-/** The shop's sign, over its open front. */
-const shopLabel = () => ({
-  id: 'shop',
-  position: [HANGAR.minX - 0.5, HANGAR.height + 2.6, (HANGAR.minZ + HANGAR.maxZ) / 2],
-  spec: { lines: [{ text: 'FRISBEE SHOP', size: 70, icon: 'frisbee', gradient: TEXT.blue }], pxPerUnit: 30 },
-  fade: 170,
-})
-
 /** The sign on the stage's launch arch. */
 const stageLabel = () => ({
   id: 'stage',
@@ -185,5 +176,5 @@ const portalLabel = () => ({
 
 /** Every label in the lobby. */
 export function lobbyLabels(profile, { sphinxStock = 0 } = {}) {
-  return [...laneLabels(), ...padLabels(profile), ...eggLabels(), sphinxLabel(sphinxStock), freeRewardLabel(), portalLabel(), stageLabel(), shopLabel()]
+  return [...laneLabels(), ...padLabels(profile), ...eggLabels(), sphinxLabel(sphinxStock), freeRewardLabel(), portalLabel(), stageLabel()]
 }

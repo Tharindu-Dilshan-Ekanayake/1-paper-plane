@@ -45,6 +45,16 @@ export const FRISBEE_STYLES = {
   royal: { color: '#8a3ee8', accent: '#ffd21f', glow: '#c77dff', design: 7 },
   crystal: { color: '#9ff6ff', accent: '#ffffff', glow: '#7ff6ff', design: 8 },
   golden: { color: '#ffc61a', accent: '#fff3b0', glow: '#ffd21f', design: 9 },
+  candy: { color: '#ff8fd0', accent: '#ffffff', glow: '#ff7ad9', design: 10 },
+  ice: { color: '#c9f3ff', accent: '#3f9cff', glow: '#9fe8ff', design: 11 },
+  lava: { color: '#3a1410', accent: '#ff6a1e', glow: '#ff4a1c', design: 12 },
+  thunder: { color: '#2b2f8f', accent: '#ffe14a', glow: '#ffe14a', design: 13 },
+  neon: { color: '#16161f', accent: '#39ff88', glow: '#39ff88', design: 14 },
+  galaxy: { color: '#2a1450', accent: '#ffffff', glow: '#a46bff', design: 15 },
+  dragon: { color: '#1f8a4a', accent: '#ffd21f', glow: '#4cff7a', design: 16 },
+  rainbow: { color: '#ffffff', accent: '#ffffff', glow: '#ff7ad9', design: 17 },
+  diamond: { color: '#d9f7ff', accent: '#5fc8ff', glow: '#bff4ff', design: 18 },
+  cosmic: { color: '#120a2a', accent: '#ff5bd8', glow: '#ff5bd8', design: 19 },
 }
 
 // Parsed once, so frame code can look colours up without allocating.
@@ -137,6 +147,9 @@ const fragmentHead = /* glsl */ `
     vec2 p = vec2(cell * TAU * ring / count, r - ring);
     return 1.0 - smoothstep(size * 0.85, size, length(p));
   }
+  float fHash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+  }
   // Star: 1 inside an n-pointed star between radii inner and outer.
   float fStar(float r, float ang, float n, float inner, float outer, float w) {
     float k = abs(fract(ang / TAU * n) - 0.5) * 2.0;
@@ -145,7 +158,7 @@ const fragmentHead = /* glsl */ `
   }
 `
 
-/** The ten top designs, chosen per instance by vFDesign. */
+/** The twenty top designs, chosen per instance by vFDesign. */
 const DESIGN_GLSL = /* glsl */ `
   {
     float r = length(vFLocal.xz) / 0.5;
@@ -153,6 +166,8 @@ const DESIGN_GLSL = /* glsl */ `
     float w = max(fwidth(r), 0.004);
     float d = vFDesign + 0.5;
     float m = 0.0;
+    // What the pattern is painted in; the accent unless a design picks its own.
+    vec3 tint = vFAccent;
     if (d < 1.0) {
       // Classic: target rings.
       m = fBand(r, 0.5, 0.58, w) + fBand(r, 0.74, 0.82, w) + fCore(r, 0.16, w);
@@ -181,30 +196,69 @@ const DESIGN_GLSL = /* glsl */ `
     } else if (d < 9.0) {
       // Crystal: an eight-point snowflake star.
       m = fStar(r, ang, 8.0, 0.22, 0.92, w) * (1.0 - fCore(r, 0.1, w)) + fBand(r, 0.42, 0.47, w);
-    } else {
+    } else if (d < 10.0) {
       // Golden: a sunburst with a bright hub.
       float rays = step(0.5, fract(ang / TAU * 16.0));
       m = rays * fBand(r, 0.3, 0.9, w) + fBand(r, 0.1, 0.2, w);
+    } else if (d < 11.0) {
+      // Candy: a lollipop swirl.
+      m = step(0.5, fract(ang / TAU * 6.0 + r * 2.2)) * smoothstep(0.08, 0.12, r);
+    } else if (d < 12.0) {
+      // Ice: icicles hanging in from the rim round a frosty hub.
+      m = fStar(r, ang, 12.0, 0.58, 0.95, w) * smoothstep(0.5, 0.56, r) + fCore(r, 0.2, w) + fBand(r, 0.34, 0.38, w);
+    } else if (d < 13.0) {
+      // Lava: flames flickering in from the rim round a molten core.
+      float flick = 0.08 * sin(uFTime * 4.0 + ang * 7.0);
+      m = (1.0 - fStar(r, ang, 7.0, 0.42 + flick, 0.82, w)) * smoothstep(0.3, 0.36, r) * (1.0 - smoothstep(0.93, 0.96, r)) + fCore(r, 0.18, w);
+    } else if (d < 14.0) {
+      // Thunder: a lightning bolt across the middle, inside a ring.
+      vec2 q = vFLocal.xz / 0.5;
+      float zig = q.x + 0.32 * (abs(fract(q.y * 1.4 + 0.25) - 0.5) * 4.0 - 1.0);
+      m = (1.0 - smoothstep(0.11, 0.14, abs(zig))) * (1.0 - smoothstep(0.76, 0.8, abs(q.y))) + fBand(r, 0.86, 0.92, w);
+    } else if (d < 15.0) {
+      // Neon: glowing rings with a pulse running outwards.
+      float pulse = 0.5 + 0.5 * sin(uFTime * 3.0 - r * 9.0);
+      m = (fBand(r, 0.18, 0.22, w) + fBand(r, 0.38, 0.42, w) + fBand(r, 0.58, 0.62, w) + fBand(r, 0.78, 0.82, w)) * (0.55 + 0.45 * pulse);
+    } else if (d < 16.0) {
+      // Galaxy: a two-arm spiral sprinkled with stars.
+      float arms = step(0.62, fract(ang / TAU * 2.0 + r * 1.3)) * smoothstep(0.12, 0.2, r) * 0.55;
+      float stars = step(0.93, fHash(floor(vFLocal.xz * 70.0)));
+      m = max(arms, stars) + fCore(r, 0.1, w);
+    } else if (d < 17.0) {
+      // Dragon: rows of golden scales round a dragon's eye.
+      m = fDots(r, ang, 0.36, 7.0, 0.1, 0.0) + fDots(r, ang, 0.56, 11.0, 0.1, 0.5) + fDots(r, ang, 0.76, 15.0, 0.1, 0.0) + fCore(r, 0.14, w);
+    } else if (d < 18.0) {
+      // Rainbow: rings of every colour.
+      m = fBand(r, 0.14, 0.93, w);
+      tint = 0.5 + 0.5 * cos(TAU * (r * 1.1 + vec3(0.0, 0.33, 0.67)));
+    } else if (d < 19.0) {
+      // Diamond: cut facets round a bright table.
+      m = mix(0.45, 1.0, step(0.5, fract(ang / TAU * 12.0))) * fBand(r, 0.3, 0.92, w) + fCore(r, 0.24, w);
+    } else {
+      // Cosmic: a four-point star in shifting colours over a starfield.
+      float stars = step(0.94, fHash(floor(vFLocal.xz * 60.0)));
+      m = max(fStar(r, ang, 4.0, 0.14, 0.82, w), stars) + fBand(r, 0.88, 0.93, w);
+      tint = 0.5 + 0.5 * cos(TAU * (ang / TAU + uFTime * 0.15 + vec3(0.0, 0.33, 0.67)));
     }
     // The upper face: above the disc's midline and facing up (the lathe's normals point
     // inwards, so go by magnitude).
     float top = step(0.0, vFLocal.y) * smoothstep(0.3, 0.7, abs(vFUp));
     fTop = top;
     float mask = clamp(m, 0.0, 1.0) * top;
-    vec3 col = mix(diffuseColor.rgb, vFAccent, mask);
+    vec3 col = mix(diffuseColor.rgb, tint, mask);
     // Moulded like the real thing: lighter in the middle, two flight rings pressed in
     // near the edge, the underside darker and the curled rim in the accent colour.
     col *= mix(1.08, 0.94, r) * mix(0.8, 1.0, top);
     col *= 1.0 - 0.16 * (fBand(r, 0.85, 0.87, w) + fBand(r, 0.9, 0.92, w)) * top;
     col = mix(col, vFAccent * 0.9 + diffuseColor.rgb * 0.1, smoothstep(0.95, 0.99, r) * 0.75);
-    // The top three are special: Royal, Crystal and Golden catch a sweeping shine, and
-    // Crystal shimmers through the rainbow.
+    // The best of each stage are special: Royal, Crystal, Golden and Galaxy upwards
+    // catch a sweeping shine, and Crystal and Diamond shimmer through the rainbow.
     float sweep = 1.0 - smoothstep(0.0, 0.07, abs(fract((vFLocal.x + vFLocal.z) * 0.9 - uFTime * 0.45) - 0.5));
-    if (d > 7.0) col += vec3(0.55) * sweep * top;
-    if (d > 8.0 && d < 9.0) col += 0.22 * (0.5 + 0.5 * cos(TAU * (r * 1.4 + ang / TAU + uFTime * 0.2 + vec3(0.0, 0.33, 0.67)))) * top;
+    if ((d > 7.0 && d < 10.0) || d > 15.0) col += vec3(0.55) * sweep * top;
+    if ((d > 8.0 && d < 9.0) || (d > 18.0 && d < 19.0)) col += 0.22 * (0.5 + 0.5 * cos(TAU * (r * 1.4 + ang / TAU + uFTime * 0.2 + vec3(0.0, 0.33, 0.67)))) * top;
     diffuseColor.rgb = col;
-    // The design glows.
-    totalEmissiveRadiance += vFAccent * mask * 0.35;
+    // The design glows; neon much more.
+    totalEmissiveRadiance += tint * mask * (d > 14.0 && d < 15.0 ? 0.8 : 0.35);
   }
 `
 
@@ -247,7 +301,7 @@ export function frisbeeMaterial() {
       // The lobby's clock, which already ticks every frame for the halos.
       shader.uniforms.uFTime = glowTime
     }
-    sharedMaterial.customProgramCacheKey = () => 'frisbee-v2'
+    sharedMaterial.customProgramCacheKey = () => 'frisbee-v3'
   }
   return sharedMaterial
 }

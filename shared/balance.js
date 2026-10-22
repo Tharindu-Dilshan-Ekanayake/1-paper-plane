@@ -62,6 +62,17 @@ export const PLANES = [
   { id: 'royal', name: 'Royal Disc', power: 210, cost: 5600 },
   { id: 'crystal', name: 'Crystal Disc', power: 490, cost: 14000 },
   { id: 'golden', name: 'Golden Disc', power: 1100, cost: 35000 },
+  // The second stage: same curve, each about 2.5x the Wins for 2.2x the power.
+  { id: 'candy', name: 'Candy Disc', power: 2400, cost: 90000 },
+  { id: 'ice', name: 'Ice Disc', power: 5300, cost: 225000 },
+  { id: 'lava', name: 'Lava Disc', power: 11500, cost: 560000 },
+  { id: 'thunder', name: 'Thunder Disc', power: 25000, cost: 1400000 },
+  { id: 'neon', name: 'Neon Disc', power: 55000, cost: 3500000 },
+  { id: 'galaxy', name: 'Galaxy Disc', power: 120000, cost: 8800000 },
+  { id: 'dragon', name: 'Dragon Disc', power: 260000, cost: 22000000 },
+  { id: 'rainbow', name: 'Rainbow Disc', power: 570000, cost: 55000000 },
+  { id: 'diamond', name: 'Diamond Disc', power: 1250000, cost: 140000000 },
+  { id: 'cosmic', name: 'Cosmic Disc', power: 2750000, cost: 350000000 },
 ]
 
 // --- Throwing ---------------------------------------------------------------------

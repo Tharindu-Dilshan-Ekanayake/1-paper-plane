@@ -9,14 +9,14 @@ import { createGroundGeometry, createGroundMap } from './ground'
 import { buildEggStands } from './eggs'
 import { buildPortalFrame } from './portalFrame'
 import { buildStage } from './stage'
-import { buildHangar, buildLanes } from './structures'
+import { buildLanes, buildShop } from './structures'
 import { buildTargets } from './targets'
-import { createThrowAreaDecal } from './throwArea'
+import { createPaintedSigns } from './throwArea'
 import { buildWaterfall } from './waterfall'
 import { buildTerrain } from './terrain'
 
 /**
- * The static lobby: ground plane, every box (hills, trees, lane floors, hangar) in one
+ * The static lobby: ground plane, every box (hills, trees, lane floors, stages) in one
  * InstancedMesh, and every non-box prop (targets...) merged into one mesh. Three draw
  * calls for the whole environment.
  *
@@ -25,7 +25,7 @@ import { buildTerrain } from './terrain'
  */
 export function World() {
   const shadows = useQuality((s) => s.settings.shadows === 'realtime')
-  const [decal, setDecal] = useState(null)
+  const [signs, setSigns] = useState([])
 
   // Drives every animated toy-material style (water...).
   useFrame((state) => {
@@ -34,25 +34,26 @@ export function World() {
   })
 
   useEffect(() => {
-    let made = null
+    let made = []
     let cancelled = false
-    createThrowAreaDecal(useQuality.getState().settings.maxTexture).then((d) => {
+    const dispose = (list) => {
+      for (const sign of list) {
+        sign.geometry.dispose()
+        sign.material.dispose()
+        sign.texture.dispose()
+      }
+    }
+    createPaintedSigns(useQuality.getState().settings.maxTexture).then((list) => {
       if (cancelled) {
-        d.geometry.dispose()
-        d.material.dispose()
-        d.texture.dispose()
+        dispose(list)
         return
       }
-      made = d
-      setDecal(d)
+      made = list
+      setSigns(list)
     })
     return () => {
       cancelled = true
-      if (made) {
-        made.geometry.dispose()
-        made.material.dispose()
-        made.texture.dispose()
-      }
+      dispose(made)
     }
   }, [])
 
@@ -63,7 +64,7 @@ export function World() {
     buildTerrain(set, { treeDensity: decorDensity })
     buildLanes(set)
     const propBuilder = new PropBuilder()
-    buildHangar(set)
+    buildShop(set, { detail: decorDensity >= 0.75 })
     buildStage(set, propBuilder, { detail: decorDensity >= 0.75 })
     buildPortalFrame(set)
     buildWaterfall(set)
@@ -99,7 +100,9 @@ export function World() {
       <mesh geometry={ground.geometry} material={ground.material} receiveShadow={shadows} />
       <primitive object={blocks} castShadow={shadows} receiveShadow={shadows} />
       <primitive object={props} castShadow={shadows} receiveShadow={shadows} />
-      {decal && <mesh geometry={decal.geometry} material={decal.material} position={decal.position} renderOrder={1} />}
+      {signs.map((sign) => (
+        <mesh key={sign.texture.uuid} geometry={sign.geometry} material={sign.material} position={sign.position} rotation={sign.rotation} renderOrder={1} />
+      ))}
     </>
   )
 }

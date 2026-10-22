@@ -69,25 +69,37 @@ export function laneRect(index) {
   }
 }
 
-// --- Plane hangar -------------------------------------------------------------------
+// --- Frisbee shop -------------------------------------------------------------------
 
 /**
- * The frisbee shop, open on its west side facing the plaza. Its south wall stays at
- * z -26 so the walk to the World 2 portal is clear.
+ * The frisbee shop: an open-air yard east of the plaza with two display stages, the
+ * first ten frisbees on the low front one and the next ten on the higher back one,
+ * and a big FRISBEES board behind. Both stages are low enough to walk straight onto.
  */
-export const HANGAR = { minX: 22, maxX: 48, minZ: -26, maxZ: 12, height: 13 }
-/** Raised back tier holding frisbees 6-10. */
-export const HANGAR_STEP = { minX: 35.5, maxX: 47.5, minZ: -25.5, maxZ: 11.5, height: 1 }
+export const SHOP = { minX: 22, maxX: 48, minZ: -26, maxZ: 12 }
+export const SHOP_STAGES = [
+  { minX: 23.5, maxX: 34, minZ: -25, maxZ: 11, height: 0.5 },
+  { minX: 36.5, maxX: 47, minZ: -25, maxZ: 11, height: 1 },
+]
+/** The board along the back (east) edge, facing the plaza. */
+export const SHOP_BOARD = { x: 48.6, minZ: -23, maxZ: 9, top: 11 }
 export const PAD_SIZE = 4.4
 
-/** Two rows of five display stands, 7 m apart, centred along the hall. */
-export const PLANE_PADS = Array.from({ length: 10 }, (_, i) => {
-  const back = i >= 5
+/** Rows of display stands, nearest the plaza first: two rows on each stage. */
+const PAD_ROWS_X = [26, 31.5, 39, 44.5]
+
+/**
+ * Twenty stands, five to a row 7 m apart. `row` (0-3, front to back) lets the labels
+ * above them step up so nearer ones don't hide farther ones.
+ */
+export const PLANE_PADS = Array.from({ length: 20 }, (_, i) => {
+  const row = Math.floor(i / 5)
   return {
     index: i,
-    x: back ? 42 : 29,
-    z: (HANGAR.minZ + HANGAR.maxZ) / 2 - 14 + (i % 5) * 7,
-    y: back ? HANGAR_STEP.height : 0,
+    row,
+    x: PAD_ROWS_X[row],
+    z: (SHOP.minZ + SHOP.maxZ) / 2 - 14 + (i % 5) * 7,
+    y: SHOP_STAGES[row < 2 ? 0 : 1].height,
   }
 })
 
@@ -133,10 +145,8 @@ const box = (x, z, halfX, halfZ) => ({
 
 /** Solid, never-changing obstacles. Locked lanes add their own walls at runtime. */
 export const STATIC_COLLIDERS = [
-  // Hangar walls (north, south, back). The west side is the open entrance.
-  { minX: HANGAR.minX, maxX: HANGAR.maxX + 1, minZ: HANGAR.minZ - 1, maxZ: HANGAR.minZ },
-  { minX: HANGAR.minX, maxX: HANGAR.maxX + 1, minZ: HANGAR.maxZ, maxZ: HANGAR.maxZ + 1 },
-  { minX: HANGAR.maxX, maxX: HANGAR.maxX + 1, minZ: HANGAR.minZ, maxZ: HANGAR.maxZ },
+  // The shop's board.
+  { minX: SHOP_BOARD.x - 0.5, maxX: SHOP_BOARD.x + 0.5, minZ: SHOP_BOARD.minZ - 0.5, maxZ: SHOP_BOARD.maxZ + 0.5 },
   // Egg pedestals.
   ...EGG_STANDS.map((s) => box(s.x, s.z, s.big ? 2.1 : 1.6, s.big ? 2.1 : 1.6)),
   box(SPHINX_STAND.x, SPHINX_STAND.z, 3, 3),
@@ -155,7 +165,7 @@ export const STATIC_COLLIDERS = [
 
 /** Raised floors the player stands on, as rects with a height. */
 export const PLATFORMS = [
-  { ...HANGAR_STEP },
+  ...SHOP_STAGES.map((s) => ({ ...s })),
   { ...STAGE },
   // Steps up the stage's south side, lowest first.
   ...Array.from({ length: STAGE_STEPS }, (_, i) => ({

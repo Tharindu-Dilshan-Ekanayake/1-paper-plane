@@ -31,7 +31,7 @@ const SPRINT_MULTIPLIER = 1.45
 const ACCELERATION = 16
 const GRAVITY = 32
 const JUMP_SPEED = 10.5
-/** Ledges up to this high are walked straight onto (the hangar's back tier). */
+/** Ledges up to this high are walked straight onto (the shop's back stage). */
 const STEP_UP = 1.05
 
 // Scratch objects, reused each frame so the loop allocates nothing.
