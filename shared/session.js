@@ -46,7 +46,6 @@ const PAD_SLACK = 2
  * - 'train'    { gain, power, level, levelProgress, leveledUp }  each training throw
  * - 'throw'    { distance, wins, trophies, duration, multiplier }  a throw to replay
  * - 'hatch'    { eggId, pets: [{ uid, id }] }  pets to reveal
- * - 'toast'    { text, kind }
  * - 'badge'    { id, name }
  *
  * `onThrow(result)` lets the host tell other players about a throw (ghost planes).
@@ -82,15 +81,6 @@ export class PlayerSession {
     this.emit('profile', { profile: this.profile, session: this.session })
   }
 
-  toast(text, kind = 'info') {
-    this.emit('toast', { text, kind })
-  }
-
-  fail(result) {
-    if (result && !result.ok && result.error) this.toast(result.error, 'error')
-    return result
-  }
-
   badge(id) {
     const badge = awardBadge(this.profile, id)
     if (badge) {
@@ -117,10 +107,7 @@ export class PlayerSession {
     enterLane({ lane }) {
       const index = Number(lane)
       if (!Number.isInteger(index) || !LANES[index]) return
-      if (!isLaneUnlocked(this.profile, index)) {
-        this.toast('This lane is locked!', 'error')
-        return
-      }
+      if (!isLaneUnlocked(this.profile, index)) return
       if (this.lane !== index) {
         this.lane = index
         // The first throw lands a beat after stepping in, not instantly.
@@ -139,17 +126,14 @@ export class PlayerSession {
     },
 
     rebirth() {
-      const result = this.fail(applyRebirth(this.profile))
+      const result = applyRebirth(this.profile)
       if (result.ok) this.afterRebirth()
     },
 
     throw(_payload, now) {
       if (now < this.busyUntil) return
       const p = this.getPosition()
-      if (!inThrowArea(p.x, p.z, THROW_SLACK)) {
-        this.toast('Go to the THROW AREA to throw!', 'error')
-        return
-      }
+      if (!inThrowArea(p.x, p.z, THROW_SLACK)) return
       const result = applyThrow(this.profile, now)
       this.busyUntil = now + result.cooldown * 1000
       this.emit('throw', {
@@ -168,23 +152,18 @@ export class PlayerSession {
     },
 
     buyPlane({ id }) {
-      if (!this.nearPadFor(id)) {
-        this.toast('Stand on the frisbee’s pad in the Shop to buy it', 'error')
-        return
-      }
-      const result = this.fail(buyPlane(this.profile, id))
+      if (!this.nearPadFor(id)) return
+      const result = buyPlane(this.profile, id)
       if (!result.ok) return
       this.dirty = true
       if (result.bought) {
         this.tutorial('buyPlane')
-        this.toast(`Bought the ${planeById(id).name}! +${planeById(id).power} Power per throw`, 'success')
       } else {
-        this.toast(`Equipped the ${planeById(id).name}`, 'success')
       }
     },
 
     equipPlane({ id }) {
-      const result = this.fail(equipPlane(this.profile, id))
+      const result = equipPlane(this.profile, id)
       if (result.ok) this.dirty = true
     },
 
@@ -192,26 +171,19 @@ export class PlayerSession {
       const egg = EGGS[eggId]
       if (!egg) return
       const p = this.getPosition()
-      if (eggStandNear(p.x, p.z)?.eggId !== eggId) {
-        this.toast('Walk up to the egg to hatch it!', 'error')
-        return
-      }
-      if (!egg.cost.wins) {
-        this.toast(`The ${egg.name} Egg is premium - buy it from its stand!`)
-        return
-      }
+      if (eggStandNear(p.x, p.z)?.eggId !== eggId) return
       const n = count === MULTI_HATCH ? MULTI_HATCH : 1
-      this.reveal(this.fail(hatchEgg(this.profile, eggId, n)))
+      this.reveal(hatchEgg(this.profile, eggId, n))
     },
 
     openEggItem({ itemId }) {
       const item = ITEMS[itemId]
       if (!item || item.kind !== 'egg') return
-      this.reveal(this.fail(hatchEgg(this.profile, item.egg, 1, { paid: 'item' })))
+      this.reveal(hatchEgg(this.profile, item.egg, 1, { paid: 'item' }))
     },
 
     equipPet({ uid }) {
-      if (this.fail(equipPet(this.profile, Number(uid))).ok) this.dirty = true
+      if (equipPet(this.profile, Number(uid)).ok) this.dirty = true
     },
 
     unequipPet({ uid }) {
@@ -229,19 +201,19 @@ export class PlayerSession {
     },
 
     claimDaily({ day }, now) {
-      const result = this.fail(claimDaily(this.profile, Number(day), now))
+      const result = claimDaily(this.profile, Number(day), now)
       this.afterReward(result)
     },
 
     claimPlaytime({ index }, now) {
-      const result = this.fail(claimPlaytime(this.profile, this.session, Number(index), now))
+      const result = claimPlaytime(this.profile, this.session, Number(index), now)
       this.afterReward(result)
     },
 
     claimFreeReward() {
       const p = this.getPosition()
       if (Math.hypot(p.x - FREE_REWARD.x, p.z - FREE_REWARD.z) > FREE_REWARD.radius + 1.5) return
-      const result = this.fail(claimFreeReward(this.profile, this.session))
+      const result = claimFreeReward(this.profile, this.session)
       this.afterReward(result)
     },
 
@@ -250,14 +222,12 @@ export class PlayerSession {
       if (Math.hypot(p.x - PORTAL.x, p.z - PORTAL.z) > PORTAL.radius + 2) return
       if (this.profile.power < WORLD2_POWER) return
       this.badge('world2')
-      this.toast('World 2 is coming soon - you made it this far!', 'success')
     },
 
     usePotion({ itemId }, now) {
-      const result = this.fail(usePotion(this.profile, itemId, now))
+      const result = usePotion(this.profile, itemId, now)
       if (!result.ok) return
       this.dirty = true
-      this.toast(`${ITEMS[itemId].name} active! x2 ${result.boost === 'power' ? 'Power' : 'Wins'} for 5 minutes`, 'success')
     },
 
     /** Buys a SHOP item with Wins. */
@@ -265,19 +235,12 @@ export class PlayerSession {
       const item = SHOP[productId]
       if (!item) return
       // Checked before the host takes stock, so a short wallet never uses up a Sphinx.
-      if (this.profile.wins < item.price) {
-        this.toast('Not enough Wins!', 'error')
-        return
-      }
+      if (this.profile.wins < item.price) return
       if (item.kind === 'pass' && this.profile.passes[productId]) return
-      if (this.onPurchase && !this.onPurchase(productId)) {
-        this.toast(`${item.name} is sold out!`, 'error')
-        return
-      }
-      const result = this.fail(buyShopItem(this.profile, productId))
+      if (this.onPurchase && !this.onPurchase(productId)) return
+      const result = buyShopItem(this.profile, productId)
       if (!result.ok) return
       this.dirty = true
-      if (!result.pets) this.toast(`Bought ${item.name}!`, 'success')
       this.reveal(result)
     },
   }
@@ -286,7 +249,6 @@ export class PlayerSession {
     if (!result?.ok) return
     this.dirty = true
     if (result.pets?.length) this.reveal(result)
-    else this.toast(`Claimed: ${result.label ?? 'Free Reward'}!`, 'success')
   }
 
   /** Sends newly gained pets to the client's hatch animation. */
@@ -302,12 +264,6 @@ export class PlayerSession {
     this.dirty = true
     this.tutorial('rebirth')
     if (this.profile.rebirths === 1) this.badge('firstRebirth')
-    this.toast(`Rebirth ${this.profile.rebirths}! Power x${this.profile.rebirths + 1}`, 'success')
-    LANES.forEach((lane) => {
-      if (!lane.product && lane.rebirths === this.profile.rebirths) {
-        this.toast(`New lane unlocked: ${lane.name} (x${lane.mult} Power)!`, 'success')
-      }
-    })
   }
 
   // --- Simulation ------------------------------------------------------------------

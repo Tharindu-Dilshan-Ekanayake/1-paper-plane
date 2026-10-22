@@ -56,7 +56,6 @@ function join(client, options, lobby) {
 
 /** Wires a joined room into the game: events, other players, position reports. */
 function attachRoom(room, identity, Callbacks) {
-  const game = getGame()
   const callbacks = Callbacks.get(room)
   let leaving = false
 
@@ -92,7 +91,6 @@ function attachRoom(room, identity, Callbacks) {
         break
       case 'kicked':
         leaving = true
-        getGame().toast(payload.reason || 'Disconnected', 'error', 6000)
         break
       default:
         handleServerEvent(type, payload)
@@ -154,7 +152,6 @@ function attachRoom(room, identity, Callbacks) {
   }
   setTransport({ send: (type, payload) => room.send(type, payload) })
   syncLobby()
-  game.toast(room.state.isPrivate ? `Private lobby ${room.state.code} - share the code with friends!` : 'Joined a lobby', 'success')
 }
 
 /**
@@ -198,7 +195,6 @@ export async function startConnection(identity, lobby = { mode: 'public' }) {
     } catch (err) {
       if (gen !== generation) return
       console.warn('[net] join failed', err)
-      if (attempt === 0 && lobby.mode === 'join') getGame().toast(`No lobby with code ${lobby.code}`, 'error')
       if (attempt >= 1) getGame().setNet({ mode: 'connecting', message: 'Server full, retrying…' })
       await wait(attempt === 0 ? 300 : RETRY_DELAY_MS)
       if (gen !== generation) return

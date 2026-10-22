@@ -6,7 +6,6 @@ import LeftMenu from './LeftMenu'
 import PowerBar from './PowerBar'
 import StatsPanel from './StatsPanel'
 import ThrowButton from './ThrowButton'
-import Toasts from './Toasts'
 import TopBar from './TopBar'
 import TopCenter from './TopCenter'
 
@@ -16,7 +15,7 @@ import TopCenter from './TopCenter'
  *
  * The root ignores pointer events so the canvas and joystick underneath keep working;
  * only the buttons themselves opt back in. While a panel is open the HUD steps aside,
- * as in the reference, leaving only toasts.
+ * as in the reference.
  */
 export function HUD() {
   const panelOpen = useGame((s) => s.panel !== null)
@@ -39,7 +38,6 @@ export function HUD() {
         <EggPanel />
         <FlightOverlay />
       </div>
-      <Toasts />
     </div>
   )
 }

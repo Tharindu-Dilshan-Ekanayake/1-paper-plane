@@ -1,5 +1,3 @@
-import { getGame } from '../store/game'
-
 /**
  * Player intents. The UI never changes game state itself: it calls one of these, the
  * authority (the Colyseus room, or the offline stand-in) validates it, and the result
@@ -14,10 +12,7 @@ export function setTransport(next) {
 }
 
 export function send(type, payload) {
-  if (!transport) {
-    getGame().toast('Connecting… try again in a moment', 'error')
-    return
-  }
+  if (!transport) return
   transport.send(type, payload)
 }
 

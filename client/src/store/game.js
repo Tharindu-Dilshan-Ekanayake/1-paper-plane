@@ -11,7 +11,6 @@ import { createProfile, createSession } from '@shared/logic'
  * re-renders the Power label and nothing else.
  */
 
-let toastId = 0
 
 export const useGame = create((set, get) => ({
   /** Authoritative copy of the player's save, as last sent by the server. */
@@ -56,7 +55,6 @@ export const useGame = create((set, get) => ({
   /** Keep hatching the egg you're standing at (the T button). Client-side only. */
   autoHatch: false,
 
-  toasts: [],
 
   // --- Actions -----------------------------------------------------------------
 
@@ -74,11 +72,6 @@ export const useGame = create((set, get) => ({
   togglePanel: (panel) => set((s) => (s.panel === panel ? { panel: null, panelData: null } : { panel, panelData: null })),
 
   /** kind: 'info' | 'error' | 'success' | 'badge' */
-  toast: (text, kind = 'info', ttl = 3200) => {
-    const id = ++toastId
-    set((s) => ({ toasts: [...s.toasts.slice(-3), { id, text, kind }] }))
-    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), ttl)
-  },
 
   startFlight: (flight) => set({ flight, pendingWins: flight.wins }),
   endFlight: () => {

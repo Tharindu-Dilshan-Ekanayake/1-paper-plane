@@ -70,12 +70,11 @@ export function HatchOverlay() {
   const autoHatch = useGame((s) => s.autoHatch)
   useEffect(() => {
     if (hatch || !autoHatch) return
-    const { zone, profile, setAutoHatch, toast } = getGame()
+    const { zone, profile, setAutoHatch } = getGame()
     const egg = EGGS[zone.egg]
     if (!egg?.cost.wins) return
     if (profile.wins < egg.cost.wins) {
       setAutoHatch(false)
-      toast('Out of Wins - Auto hatch stopped', 'info')
       return
     }
     actions.hatch(zone.egg, 1)

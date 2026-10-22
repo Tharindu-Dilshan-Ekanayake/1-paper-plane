@@ -1,23 +1,20 @@
 import { SHOP } from '@shared/balance'
-import { formatNumber } from '@shared/format'
 
+import { sfx } from '../audio/sfx'
 import { getGame } from '../store/game'
 import { actions } from './actions'
 
 /**
  * Buys a shop item with Wins. The authority checks and charges; this only spares a
- * round trip when the answer is obviously no.
+ * round trip when the answer is obviously no (the price already shows red).
  */
 export function buy(productId) {
   const item = SHOP[productId]
   if (!item) return
-  const { profile, toast } = getGame()
-  if (item.kind === 'pass' && profile.passes[productId]) {
-    toast(`You already own ${item.name}!`, 'info')
-    return
-  }
+  const { profile } = getGame()
+  if (item.kind === 'pass' && profile.passes[productId]) return
   if (profile.wins < item.price) {
-    toast(`You need ${formatNumber(item.price)} Wins!`, 'error')
+    sfx.error()
     return
   }
   actions.purchase(productId)

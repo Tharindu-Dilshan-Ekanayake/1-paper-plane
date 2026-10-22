@@ -63,13 +63,7 @@ export function handleServerEvent(type, payload) {
       game.openPanel('offline', payload)
       break
 
-    case 'toast':
-      game.toast(payload.text, payload.kind)
-      if (payload.kind === 'error') sfx.error()
-      break
-
     case 'badge':
-      game.toast(`Badge Awarded! You won the "${payload.name}" badge!`, 'badge', 5000)
       sfx.wins()
       break
 
