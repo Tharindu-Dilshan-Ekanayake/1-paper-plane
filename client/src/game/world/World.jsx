@@ -62,12 +62,12 @@ export function World() {
     const set = new BlockSet()
     buildTerrain(set, { treeDensity: decorDensity })
     buildLanes(set)
+    const propBuilder = new PropBuilder()
     buildHangar(set)
-    buildStage(set)
+    buildStage(set, propBuilder, { detail: decorDensity >= 0.75 })
     buildPortalFrame(set)
     buildWaterfall(set)
 
-    const propBuilder = new PropBuilder()
     buildTargets(propBuilder)
     buildEggStands(set, propBuilder)
 

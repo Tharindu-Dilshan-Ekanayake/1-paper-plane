@@ -45,6 +45,6 @@ export async function createThrowAreaDecal(maxTexture) {
   const w = THROW_AREA.maxX - THROW_AREA.minX
   const geometry = new PlaneGeometry(w, w * 0.22)
   geometry.rotateX(-Math.PI / 2)
-  // On the stage floor, centred on the pad.
-  return { geometry, material, texture, position: [0, STAGE.height + 0.07, (THROW_AREA.minZ + THROW_AREA.maxZ) / 2] }
+  // Just above the pad's raised yellow fill (its top is 0.12 up), centred on it.
+  return { geometry, material, texture, position: [0, STAGE.height + 0.15, (THROW_AREA.minZ + THROW_AREA.maxZ) / 2] }
 }

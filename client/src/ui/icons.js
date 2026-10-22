@@ -7,7 +7,15 @@
  * be inlined side by side without clashing.
  */
 
+import rebirthImage from '../assets/rebirth.webp'
+
 const OUT = '#1b1b1f'
+
+/** Icons that are artwork rather than drawn SVG, by name. */
+const IMAGE_ICONS = {
+  // The game's own rebirth art: pink and ice-blue chasing arrows (150 px, 5 KB).
+  rebirth: rebirthImage,
+}
 
 const svg = (body, defs = '') =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs>${defs}</defs>${body}</svg>`
@@ -39,41 +47,6 @@ const trophy = svg(
   <path d="M50 21l4.6 9.4 10.4 1.5-7.5 7.3 1.8 10.3L50 44.6l-9.3 4.9 1.8-10.3-7.5-7.3 10.4-1.5z" fill="#fffbd1" stroke="#d98900" stroke-width="2.5" stroke-linejoin="round"/>
   <path d="M30 18v16c0 8 3 14 8 18" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" opacity=".75"/>`,
   vgrad('tr-g', GOLD),
-)
-
-/**
- * Rebirth: two chasing arrows in a ring, pink on top and ice-blue below, each with a
- * darker underside for a chunky 3D look. The blue arrow is the pink one turned 180 degrees
- * about the ring's centre (50, 46).
- */
-const REBIRTH_ARC = 'M20.5 40.8A30 30 0 0 1 73 26.7'
-const REBIRTH_HEAD = '83.7,17.7 83.3,39 62.3,35.7'
-const REBIRTH_SHINE = 'M19 34.7A33 33 0 0 1 45.4 13.3'
-
-/** One arrow's shape in a given fill; `turn` rotates it about the ring's centre. */
-const rebirthShape = (fill, turn, shine) => `
-  <g transform="${turn}" stroke-linejoin="round" stroke-linecap="round">
-    <path d="${REBIRTH_ARC}" fill="none" stroke="${OUT}" stroke-width="21"/>
-    <polygon points="${REBIRTH_HEAD}" fill="${OUT}" stroke="${OUT}" stroke-width="10"/>
-    <path d="${REBIRTH_ARC}" fill="none" stroke="${fill}" stroke-width="12"/>
-    <polygon points="${REBIRTH_HEAD}" fill="${fill}"/>
-    ${shine ? `<path d="${REBIRTH_SHINE}" fill="none" stroke="${shine}" stroke-width="3.5" opacity=".8"/>` : ''}
-  </g>`
-
-const rebirthArrow = (fill, side, shine, turn) =>
-  `<g transform="translate(0 6)">${rebirthShape(side, turn, '')}</g>${rebirthShape(`url(#${fill})`, turn, shine)}`
-
-const rebirth = svg(
-  rebirthArrow('rb-b', '#3b8fe0', '#ffffff', 'rotate(180 50 46)') +
-    rebirthArrow('rb-p', '#c8186a', '#ffe3ee', ''),
-  vgrad('rb-p', [
-    [0, '#ffa6c4'],
-    [1, '#f0457f'],
-  ]) +
-    vgrad('rb-b', [
-      [0, '#f2fbff'],
-      [1, '#8ad0ff'],
-    ]),
 )
 
 const muscle = svg(
@@ -250,7 +223,6 @@ export const ICON_SVGS = {
   starGold,
   fastForward,
   trophy,
-  rebirth,
   muscle,
   pets,
   items,
@@ -279,6 +251,7 @@ const urlCache = new Map()
 
 /** `data:` URL for an icon name, or `egg:<id>` for an egg. */
 export function iconUrl(name) {
+  if (IMAGE_ICONS[name]) return IMAGE_ICONS[name]
   let url = urlCache.get(name)
   if (url) return url
   let markup = ICON_SVGS[name]
