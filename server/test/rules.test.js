@@ -37,7 +37,7 @@ test('training levels up every 10 throws and stops at the cap', () => {
   const p = createProfile('a', 'A')
   for (let i = 0; i < 30; i += 1) applyTrain(p, 0, 0)
   assert.equal(p.level, 2)
-  assert.equal(p.power, 30, 'paper plane in the free lane: +1 per throw at levels 1-2')
+  assert.equal(p.power, 30, 'classic frisbee in the free lane: +1 per throw at levels 1-2')
 })
 
 test('rebirth needs max level, resets power, keeps wins and planes', () => {
