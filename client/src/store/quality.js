@@ -1,0 +1,140 @@
+import { create } from 'zustand'
+
+/**
+ * Graphics quality presets. Every visual feature reads its settings from here rather
+ * than deciding for itself, so dropping a preset reliably sheds load everywhere.
+ *
+ * LOW is the mobile / weak-PC baseline: no realtime shadows, no particles, no
+ * post-processing, short view distance and textures capped at 512px.
+ */
+export const QUALITY_LEVELS = ['LOW', 'MEDIUM', 'HIGH']
+
+export const PRESETS = {
+  LOW: {
+    dpr: 1,
+    antialias: false,
+    /** 'blob' = fake contact shadows only; 'realtime' = shadow-mapped sun. */
+    shadows: 'blob',
+    shadowMapSize: 0,
+    particles: false,
+    speedLines: false,
+    viewDistance: 190,
+    fogNear: 60,
+    cloudCount: 8,
+    /** Max side of any generated texture. */
+    maxTexture: 512,
+    /** Remote players beyond this are not drawn at all. */
+    remoteDrawDistance: 40,
+    remoteNameDistance: 18,
+    /** World labels fade out past this. */
+    labelDistance: 70,
+    /** How much of the track's side scenery to spawn (0-1). */
+    decorDensity: 0.45,
+    leaderboards: false,
+  },
+  MEDIUM: {
+    dpr: 1.25,
+    antialias: true,
+    shadows: 'blob',
+    shadowMapSize: 0,
+    particles: true,
+    speedLines: true,
+    viewDistance: 300,
+    fogNear: 100,
+    cloudCount: 14,
+    maxTexture: 1024,
+    remoteDrawDistance: 60,
+    remoteNameDistance: 28,
+    labelDistance: 110,
+    decorDensity: 0.75,
+    leaderboards: true,
+  },
+  HIGH: {
+    dpr: 1.5,
+    antialias: true,
+    shadows: 'realtime',
+    shadowMapSize: 2048,
+    particles: true,
+    speedLines: true,
+    viewDistance: 460,
+    fogNear: 140,
+    cloudCount: 18,
+    maxTexture: 1024,
+    remoteDrawDistance: 60,
+    remoteNameDistance: 35,
+    labelDistance: 150,
+    decorDensity: 1,
+    leaderboards: true,
+  },
+}
+
+const STORAGE_KEY = 'pp.quality'
+
+function isMobileDevice() {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent || ''
+  if (/Android|iPhone|iPad|iPod|Mobile|Silk|Kindle/i.test(ua)) return true
+  // iPadOS reports itself as a Mac; touch points give it away.
+  return navigator.maxTouchPoints > 1 && /Macintosh/.test(ua)
+}
+
+/**
+ * Picks a starting preset from the hardware. Deliberately pessimistic: the monitor can
+ * only ever drop a level, so starting too high costs a few janky seconds, while
+ * starting too low costs nothing.
+ */
+export function detectQuality() {
+  if (typeof navigator === 'undefined') return 'MEDIUM'
+  const cores = navigator.hardwareConcurrency || 4
+  const memory = navigator.deviceMemory || 8
+  if (isMobileDevice() || cores <= 4) return 'LOW'
+  if (cores <= 8 || memory <= 4) return 'MEDIUM'
+  return 'HIGH'
+}
+
+function readSaved() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    return QUALITY_LEVELS.includes(saved) ? saved : null
+  } catch {
+    return null
+  }
+}
+
+const initialLevel = readSaved() || detectQuality()
+
+export const useQuality = create((set, get) => ({
+  level: initialLevel,
+  /** True when the player picked the level by hand; auto-drop then stays out of it. */
+  manual: readSaved() !== null,
+  isMobile: isMobileDevice(),
+  /** Set once at startup: antialiasing can't change without recreating the context. */
+  antialias: PRESETS[initialLevel].antialias,
+  settings: PRESETS[initialLevel],
+
+  setLevel: (level, manual = true) => {
+    if (!QUALITY_LEVELS.includes(level)) return
+    if (manual) {
+      try {
+        localStorage.setItem(STORAGE_KEY, level)
+      } catch {
+        // Private mode: the choice just won't persist.
+      }
+    }
+    set({ level, manual, settings: PRESETS[level] })
+  },
+
+  /** Called by the performance monitor when FPS stays under budget. */
+  degrade: () => {
+    const { level, manual } = get()
+    if (manual) return
+    const index = QUALITY_LEVELS.indexOf(level)
+    if (index <= 0) return
+    const next = QUALITY_LEVELS[index - 1]
+    console.info(`[quality] FPS under budget, dropping ${level} -> ${next}`)
+    set({ level: next, settings: PRESETS[next] })
+  },
+}))
+
+/** Non-reactive read, safe inside useFrame. */
+export const getQuality = () => useQuality.getState().settings

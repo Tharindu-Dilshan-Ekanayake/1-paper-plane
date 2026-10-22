@@ -1,9 +1,14 @@
 @import 'tailwindcss';
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+  /*
+   * HUD unit: one pixel of the 1920x1080 reference layout, scaled to fit the viewport
+   * and floored so touch targets stay usable on phones.
+   */
+  --px: clamp(0.42px, min(100vw / 1920, 100vh / 1080), 1.4px);
 }
 
 html,
@@ -12,10 +17,63 @@ body,
   height: 100%;
   margin: 0;
   overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  background: #a6d6fb;
 }
 
 /* The R3F canvas fills its container; the HUD is absolutely positioned over it. */
 canvas {
   display: block;
   touch-action: none;
+}
+
+.pp-font {
+  font-family: 'Fredoka One', 'Arial Rounded MT Bold', system-ui, sans-serif;
+  letter-spacing: 0.01em;
+}
+
+/* Outlined text, see StrokeText.jsx. */
+.pp-text {
+  position: relative;
+  display: inline-block;
+  font-family: 'Fredoka One', 'Arial Rounded MT Bold', system-ui, sans-serif;
+  white-space: nowrap;
+}
+.pp-text-stroke {
+  position: absolute;
+  inset: 0;
+  color: #000;
+  -webkit-text-stroke-color: #000;
+  -webkit-text-stroke-width: 6px;
+  text-shadow: 0 0.06em 0 #000;
+  pointer-events: none;
+  user-select: none;
+}
+.pp-text-fill {
+  position: relative;
+}
+
+/* Single-element outline for small labels where a gradient isn't needed. */
+.pp-stroke {
+  font-family: 'Fredoka One', 'Arial Rounded MT Bold', system-ui, sans-serif;
+  color: #fff;
+  -webkit-text-stroke: 0.18em #000;
+  paint-order: stroke fill;
+}
+
+@keyframes pp-fly {
+  0% {
+    transform: translate(-30px, 8px) rotate(-4deg);
+  }
+  50% {
+    transform: translate(30px, -10px) rotate(4deg);
+  }
+  100% {
+    transform: translate(-30px, 8px) rotate(-4deg);
+  }
+}
+.pp-loading-plane {
+  animation: pp-fly 2.4s ease-in-out infinite;
+  filter: drop-shadow(0 8px 0 rgba(0, 0, 0, 0.25));
 }
