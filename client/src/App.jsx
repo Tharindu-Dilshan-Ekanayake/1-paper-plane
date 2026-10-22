@@ -1,8 +1,7 @@
 import { useCallback, useState } from 'react'
 
 import GameScene from './game/GameScene'
-import AuthHUD from './ui/AuthHUD'
-import Controls from './ui/Controls'
+import HUD from './ui/hud/HUD'
 import LoadingScreen from './ui/LoadingScreen'
 import TouchControls from './ui/TouchControls'
 
@@ -14,8 +13,7 @@ function App() {
     <div className="relative h-full w-full select-none overflow-hidden">
       <GameScene onReady={handleReady} />
       <TouchControls />
-      <AuthHUD />
-      <Controls />
+      <HUD />
       <LoadingScreen done={ready} />
     </div>
   )

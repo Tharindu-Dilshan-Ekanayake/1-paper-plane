@@ -77,3 +77,36 @@ canvas {
   animation: pp-fly 2.4s ease-in-out infinite;
   filter: drop-shadow(0 8px 0 rgba(0, 0, 0, 0.25));
 }
+
+/* Chunky press feel for every HUD button. */
+.pp-btn {
+  cursor: pointer;
+  transition:
+    transform 0.08s ease-out,
+    filter 0.12s;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.pp-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.pp-btn:active:not(:disabled) {
+  transform: scale(0.93);
+}
+.pp-btn:disabled {
+  cursor: default;
+}
+
+@keyframes pp-toast-in {
+  from {
+    transform: translateX(110%);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.pp-toast {
+  animation: pp-toast-in 0.25s ease-out;
+}

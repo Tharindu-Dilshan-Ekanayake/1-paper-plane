@@ -120,7 +120,7 @@ export function TouchControls() {
         type="button"
         aria-label="Jump"
         className="absolute z-20 flex touch-none items-center justify-center rounded-full border-4 border-black/50 bg-white/30 text-white active:bg-white/60"
-        style={{ width: 78, height: 78, right: 26, bottom: 'max(26px, 18vh)' }}
+        style={{ width: 70, height: 70, right: 14, bottom: 14 }}
         onPointerDown={(e) => {
           e.preventDefault()
           runtime.input.jump = true
