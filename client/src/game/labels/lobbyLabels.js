@@ -1,4 +1,4 @@
-import { EGGS, LANES, PETS, PLANES, PRODUCTS, WORLD2_POWER } from '@shared/balance'
+import { EGGS, LANES, PETS, PLANES, SHOP, WORLD2_POWER } from '@shared/balance'
 import { formatNumber } from '@shared/format'
 import {
   EGG_STANDS,
@@ -37,7 +37,7 @@ export function laneLabelSpec(index) {
   const lines = []
   if (lane.product) {
     lines.push({ text: lane.tag, size: 50, rainbow: true })
-    lines.push({ text: String(PRODUCTS[lane.product].price), size: 44, icon: 'bux', gradient: TEXT.price })
+    lines.push({ text: `${formatNumber(SHOP[lane.product].price)} Wins`, size: 44, icon: 'trophy', gradient: TEXT.gold })
   } else if (lane.rebirths === 0) {
     lines.push({ text: 'FREE', size: 50, gradient: TEXT.green })
   } else {
@@ -106,7 +106,7 @@ export function eggLabels() {
     const lines = stand.big
       ? [
           { text: 'Demon Egg', size: 54, gradient: TEXT.red },
-          { text: String(PRODUCTS.demonEgg.price), size: 46, icon: 'bux', gradient: TEXT.price },
+          { text: `${formatNumber(egg.cost.wins)} Wins`, size: 46, icon: 'trophy', gradient: TEXT.gold },
         ]
       : [
           { text: egg.name, size: 50, fill: '#ffffff' },
@@ -126,7 +126,7 @@ export function sphinxLabelSpec(stock) {
   const mult = PETS.sphinx.mult
   return {
     lines: [
-      { text: String(PRODUCTS.sphinx.price), size: 46, icon: 'bux', gradient: TEXT.price },
+      { text: `${formatNumber(SHOP.sphinx.price)} Wins`, size: 46, icon: 'trophy', gradient: TEXT.gold },
       { text: 'BEST IN GAME', size: 56, gradient: TEXT.red },
       { text: 'Sphinx', size: 76, fill: '#ffffff' },
       { text: `${formatNumber(mult * 100 - 100)}% BETTER`, size: 54, rainbow: true },

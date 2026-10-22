@@ -1,12 +1,11 @@
-import { levelCap, PRODUCTS, rebirthMultiplier } from '@shared/balance'
+import { levelCap, rebirthMultiplier } from '@shared/balance'
 import { isMaxLevel, rebirthProgress } from '@shared/logic'
 
 import { actions } from '../../net/actions'
-import { purchase } from '../../net/premium'
 import { useGame } from '../../store/game'
 import Icon from '../Icon'
 import StrokeText from '../StrokeText'
-import { Price } from '../hud/parts'
+import { ChunkyButton } from '../hud/parts'
 import { GRADIENTS, u } from '../hud/style'
 import Panel from './Panel'
 
@@ -32,7 +31,7 @@ function StatCard({ icon, text, size = 58 }) {
 
 /**
  * Rebirth: what you have now vs. after the next rebirth, progress to the level cap,
- * and the two ways to rebirth (earn it, or skip for Bux and keep everything).
+ * and the rebirth button once you've reached it.
  */
 export function RebirthPanel() {
   const rebirths = useGame((s) => s.profile.rebirths)
@@ -87,46 +86,20 @@ export function RebirthPanel() {
         </div>
       </div>
 
-      <div className="flex" style={{ gap: u(18), marginTop: u(22) }}>
-        <button
-          type="button"
-          onClick={() => purchase('skipRebirth')}
-          className="pp-btn relative flex flex-1 items-center justify-center"
-          style={{
-            height: u(130),
-            borderRadius: u(6),
-            background: GRADIENTS.rainbow,
-            border: `${u(5)} solid #111`,
-            boxShadow: `inset 0 ${u(5)} 0 rgba(255,255,255,0.45), 0 ${u(5)} 0 rgba(0,0,0,0.4)`,
-          }}
-        >
-          <span style={{ fontSize: u(62), marginTop: u(-18) }}>
-            <StrokeText stroke={u(11)}>SKIP REBIRTH</StrokeText>
-          </span>
-          <Price amount={PRODUCTS.skipRebirth.price} size={40} className="absolute" style={{ left: u(10), bottom: u(-8) }} />
-          <span className="absolute" style={{ right: u(10), bottom: u(-6), fontSize: u(32) }}>
-            <StrokeText stroke={u(7)} gradient={GRADIENTS.gold}>
-              KEEP ALL STATS!
-            </StrokeText>
-          </span>
-        </button>
-        <button
-          type="button"
+      <div className="flex" style={{ marginTop: u(22) }}>
+        <ChunkyButton
           disabled={!ready}
           onClick={() => actions.rebirth()}
-          className="pp-btn relative flex flex-1 items-center justify-center"
-          style={{
-            height: u(130),
-            borderRadius: u(6),
-            background: ready ? GRADIENTS.greenButton : GRADIENTS.greyButton,
-            border: `${u(5)} solid #111`,
-            boxShadow: `inset 0 ${u(5)} 0 rgba(255,255,255,0.45), 0 ${u(5)} 0 rgba(0,0,0,0.4)`,
-          }}
+          gradient={ready ? GRADIENTS.greenButton : GRADIENTS.greyButton}
+          className="flex-1"
+          style={{ height: u(130) }}
+          radius={14}
+          border={5}
         >
           <span style={{ fontSize: u(84) }}>
             <StrokeText stroke={u(13)}>REBIRTH</StrokeText>
           </span>
-        </button>
+        </ChunkyButton>
       </div>
     </Panel>
   )

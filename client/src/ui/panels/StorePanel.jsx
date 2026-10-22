@@ -1,6 +1,6 @@
-import { PRODUCTS } from '@shared/balance'
+import { SHOP } from '@shared/balance'
 
-import { purchase } from '../../net/premium'
+import { buy } from '../../net/shop'
 import { useGame } from '../../store/game'
 import Icon from '../Icon'
 import PetIcon from '../PetIcon'
@@ -10,41 +10,32 @@ import { GRADIENTS, u } from '../hud/style'
 import Panel from './Panel'
 
 const SECTIONS = [
-  { title: 'Gamepasses', items: ['autoThrow', 'x2Power', 'x2Wins', 'laneVeryOp', 'laneBestOverall'] },
   { title: 'Power Packs', items: ['power100k', 'power1m', 'power10m'] },
-  { title: 'Specials', items: ['skipRebirth', 'demonEgg', 'sphinx'] },
+  { title: 'Lanes', items: ['laneVeryOp', 'laneBestOverall'] },
+  { title: 'Specials', items: ['sphinx'] },
 ]
 
 const ICONS = {
-  autoThrow: 'autoThrow',
-  x2Power: 'muscle',
-  x2Wins: 'trophy',
   laneVeryOp: 'portal',
   laneBestOverall: 'portal',
   power100k: 'muscle',
   power1m: 'muscle',
   power10m: 'muscle',
-  skipRebirth: 'rebirth',
-  demonEgg: 'egg:demon',
 }
 
 const BLURBS = {
-  autoThrow: 'Throws for you in the Throw Area',
-  x2Power: 'Double Power from training, forever',
-  x2Wins: 'Double Wins from every throw',
   laneVeryOp: 'Unlocks the x30 Rainbow lane',
   laneBestOverall: 'Unlocks the x100 Galaxy lane',
   power100k: 'Instant +100K Power',
   power1m: 'Instant +1M Power',
   power10m: 'Instant +10M Power',
-  skipRebirth: 'Rebirth now and keep all stats',
-  demonEgg: 'Hatch a Demon Egg pet',
   sphinx: 'Limited: 150x Power pet',
 }
 
-/** Every premium product, grouped, with what it does and whether you own it. */
+/** Everything Wins can buy besides frisbees and eggs, grouped, with what it does. */
 export function StorePanel() {
   const passes = useGame((s) => s.profile.passes)
+  const wins = useGame((s) => s.profile.wins)
   return (
     <Panel title="STORE" width={1080}>
       <div className="flex flex-col" style={{ gap: u(18) }}>
@@ -57,7 +48,7 @@ export function StorePanel() {
             </div>
             <div className="grid" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${u(200)}, 1fr))`, gap: u(12) }}>
               {section.items.map((id) => {
-                const product = PRODUCTS[id]
+                const product = SHOP[id]
                 const owned = product.kind === 'pass' && passes[id]
                 return (
                   <div
@@ -77,7 +68,7 @@ export function StorePanel() {
                     <ChunkyButton
                       gradient={owned ? GRADIENTS.greyButton : GRADIENTS.greenButton}
                       disabled={owned}
-                      onClick={() => purchase(id)}
+                      onClick={() => buy(id)}
                       className="w-full"
                       style={{ height: u(58) }}
                     >
@@ -86,7 +77,7 @@ export function StorePanel() {
                           <StrokeText stroke={u(6)}>Owned</StrokeText>
                         </span>
                       ) : (
-                        <Price amount={product.price} size={32} />
+                        <Price amount={product.price} size={32} afford={wins >= product.price} />
                       )}
                     </ChunkyButton>
                   </div>

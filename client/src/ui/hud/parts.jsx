@@ -1,3 +1,5 @@
+import { formatNumber } from '@shared/format'
+
 import Icon from '../Icon'
 import StrokeText from '../StrokeText'
 import { GRADIENTS, u } from './style'
@@ -22,38 +24,39 @@ export function AlertBadge({ size = 44, style }) {
   )
 }
 
-/** Premium price: the Bux coin and the amount in green. */
-export function Price({ amount, size = 34, className = '', style }) {
+/** A price in Wins: the trophy and the amount, gold - or red while you can't afford it. */
+export function Price({ amount, size = 34, afford = true, className = '', style }) {
   return (
-    <span className={`inline-flex items-center ${className}`} style={{ gap: u(4), fontSize: u(size), ...style }}>
-      <Icon name="bux" size={u(size * 1.15)} />
-      <StrokeText stroke={u(size * 0.22)} gradient={GRADIENTS.priceGreen}>
-        {amount}
+    <span className={`inline-flex items-center ${className}`} style={{ gap: u(size * 0.12), fontSize: u(size), lineHeight: 1, ...style }}>
+      <Icon name="trophy" size={u(size * 1.1)} />
+      <StrokeText stroke={u(size * 0.24)} gradient={afford ? GRADIENTS.gold : GRADIENTS.priceShort}>
+        {formatNumber(amount)}
       </StrokeText>
     </span>
   )
 }
 
 /**
- * The game's standard chunky button: gradient face, black border, drop and a press
- * squish. Children are laid out centred.
+ * The game's standard chunky button: gradient face with a glossy top, black outline,
+ * and a dark lip it presses down into (see .pp-chunky). Children are laid out centred.
  */
-export function ChunkyButton({ onClick, gradient = GRADIENTS.goldButton, className = '', style, children, disabled, title, radius = 12, border = 4 }) {
+export function ChunkyButton({ onClick, gradient = GRADIENTS.goldButton, className = '', style, children, disabled, title, radius = 14, border = 4 }) {
   return (
     <button
       type="button"
       title={title}
+      aria-label={title}
       disabled={disabled}
       onClick={onClick}
-      className={`pp-btn pointer-events-auto relative flex items-center justify-center ${className}`}
+      className={`pp-btn pp-chunky pointer-events-auto relative flex items-center justify-center ${className}`}
       style={{
         background: gradient,
         borderRadius: u(radius),
         border: `${u(border)} solid #111`,
-        boxShadow: `0 ${u(5)} 0 rgba(0,0,0,0.45), inset 0 ${u(4)} 0 rgba(255,255,255,0.45), inset 0 -${u(5)} 0 rgba(0,0,0,0.18)`,
         ...style,
       }}
     >
+      <span className="pp-gloss" style={{ borderRadius: `${u(radius * 0.7)} ${u(radius * 0.7)} ${u(radius * 0.45)} ${u(radius * 0.45)}` }} />
       {children}
     </button>
   )

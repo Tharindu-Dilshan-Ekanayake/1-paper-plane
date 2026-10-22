@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { EGGS, levelCap, PLANES } from '../../shared/balance.js'
+import { EGGS, levelCap, PLANES, SHOP } from '../../shared/balance.js'
 import { formatNumber } from '../../shared/format.js'
 import {
   applyRebirth,
@@ -124,9 +124,17 @@ test('planes can only be bought standing on their pad', () => {
   assert.equal(p.ownedPlanes.length, 2)
 })
 
-test('mock purchases are refused unless enabled', () => {
+test('the shop sells for Wins only', () => {
   const p = createProfile('a', 'A')
   const s = new PlayerSession(p, { now: 0, emit: () => {}, getPosition: () => ({ x: 0, z: 0 }) })
-  s.handle('purchase', { productId: 'power10m' }, 0)
+  s.handle('purchase', { productId: 'power100k' }, 0)
   assert.equal(p.power, 0)
+  p.wins = SHOP.power100k.price + 7
+  s.handle('purchase', { productId: 'power100k' }, 0)
+  assert.equal(p.power, 1e5)
+  assert.equal(p.wins, 7)
+  p.wins = SHOP.laneVeryOp.price
+  s.handle('purchase', { productId: 'laneVeryOp' }, 0)
+  assert.equal(p.passes.laneVeryOp, true)
+  assert.equal(p.wins, 0)
 })

@@ -1,4 +1,4 @@
-import { EGGS, ITEMS, LANES, MULTI_HATCH, PLANES, PRODUCTS, TRAIN_INTERVAL, WORLD2_POWER } from './balance.js'
+import { EGGS, ITEMS, LANES, MULTI_HATCH, PLANES, SHOP, TRAIN_INTERVAL, WORLD2_POWER } from './balance.js'
 import {
   advanceTutorial,
   applyRebirth,
@@ -13,9 +13,8 @@ import {
   deletePet,
   equipBestPets,
   equipPet,
+  buyShopItem,
   equipPlane,
-  friendBoost,
-  grantProduct,
   hatchEgg,
   isLaneUnlocked,
   isMaxLevel,
@@ -57,18 +56,14 @@ export class PlayerSession {
    * @param {object} profile normalized profile (see logic.normalizeProfile)
    * @param {{ now: number, emit: (type: string, payload?: object) => void,
    *           getPosition: () => {x: number, y: number, z: number},
-   *           getFriends?: () => number, mockPurchases?: boolean,
    *           onPurchase?: (productId: string) => boolean }} options
-   *   `mockPurchases` grants premium products on request with no payment (dev and
-   *   offline only). `onPurchase` lets the host veto or count a grant (stock limits).
+   *   `onPurchase` lets the host veto or count a shop sale (stock limits).
    */
-  constructor(profile, { now, emit, getPosition, getFriends = () => 0, mockPurchases = false, onPurchase, onThrow }) {
+  constructor(profile, { now, emit, getPosition, onPurchase, onThrow }) {
     this.profile = profile
     this.session = createSession(now)
     this.emit = emit
     this.getPosition = getPosition
-    this.getFriends = getFriends
-    this.mockPurchases = mockPurchases
     this.onPurchase = onPurchase
     this.onThrow = onThrow
 
@@ -138,14 +133,8 @@ export class PlayerSession {
     },
 
     setting({ key, value }) {
-      if (key === 'autoThrow') {
-        if (!this.profile.passes.autoThrow) return
-        this.profile.settings.autoThrow = Boolean(value)
-      } else if (key === 'autoRebirth') {
-        this.profile.settings.autoRebirth = Boolean(value)
-      } else {
-        return
-      }
+      if (key !== 'autoRebirth') return
+      this.profile.settings.autoRebirth = Boolean(value)
       this.dirty = true
     },
 
@@ -271,34 +260,26 @@ export class PlayerSession {
       this.toast(`${ITEMS[itemId].name} active! x2 ${result.boost === 'power' ? 'Power' : 'Wins'} for 5 minutes`, 'success')
     },
 
-    purchase({ productId }, now) {
-      if (!this.mockPurchases) {
-        this.toast('Purchases are coming soon!')
+    /** Buys a SHOP item with Wins. */
+    purchase({ productId }) {
+      const item = SHOP[productId]
+      if (!item) return
+      // Checked before the host takes stock, so a short wallet never uses up a Sphinx.
+      if (this.profile.wins < item.price) {
+        this.toast('Not enough Wins!', 'error')
         return
       }
-      this.grant(productId, now)
+      if (item.kind === 'pass' && this.profile.passes[productId]) return
+      if (this.onPurchase && !this.onPurchase(productId)) {
+        this.toast(`${item.name} is sold out!`, 'error')
+        return
+      }
+      const result = this.fail(buyShopItem(this.profile, productId))
+      if (!result.ok) return
+      this.dirty = true
+      if (!result.pets) this.toast(`Bought ${item.name}!`, 'success')
+      this.reveal(result)
     },
-  }
-
-  /**
-   * Grants a paid product. Called for mock purchases here, and by the server's payment
-   * webhook for real ones.
-   */
-  grant(productId, now) {
-    const product = PRODUCTS[productId]
-    if (!product) return { ok: false }
-    if (this.onPurchase && !this.onPurchase(productId)) {
-      this.toast(`${product.name} is sold out!`, 'error')
-      return { ok: false }
-    }
-    const result = this.fail(grantProduct(this.profile, productId))
-    if (!result.ok) return result
-    this.dirty = true
-    if (productId === 'skipRebirth') this.afterRebirth()
-    else if (!result.pets) this.toast(`Purchased ${product.name}!`, 'success')
-    this.reveal(result)
-    if (this.dirty) this.sendProfile()
-    return result
   }
 
   afterReward(result) {
@@ -330,10 +311,6 @@ export class PlayerSession {
   }
 
   // --- Simulation ------------------------------------------------------------------
-
-  friends() {
-    return this.getFriends()
-  }
 
   /** Whether the player stands on (or right by) the pad for plane `id`. */
   nearPadFor(id) {
@@ -367,7 +344,7 @@ export class PlayerSession {
   }
 
   trainOnce(now) {
-    const result = applyTrain(this.profile, this.lane, now, this.friends())
+    const result = applyTrain(this.profile, this.lane, now)
     if (!result.ok) {
       this.lane = -1
       return
@@ -385,10 +362,5 @@ export class PlayerSession {
       const rebirth = applyRebirth(this.profile)
       if (rebirth.ok) this.afterRebirth()
     }
-  }
-
-  /** Friend Boost fraction, for display. */
-  friendBoost() {
-    return friendBoost(this.friends())
   }
 }

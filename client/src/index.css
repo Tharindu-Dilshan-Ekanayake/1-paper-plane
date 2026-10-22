@@ -97,6 +97,51 @@ canvas {
   cursor: default;
 }
 
+/*
+ * The game's chunky button: a thick dark lip under the face that it presses down
+ * into, and a glossy highlight across the top. --lip is the lip's height.
+ */
+.pp-chunky {
+  --lip: calc(var(--px) * 6);
+  box-shadow:
+    0 var(--lip) 0 #111,
+    0 calc(var(--lip) + var(--px) * 4) calc(var(--px) * 6) rgba(0, 0, 0, 0.3),
+    inset 0 calc(var(--px) * -5) 0 rgba(0, 0, 0, 0.2);
+  transition:
+    transform 0.07s ease-out,
+    box-shadow 0.07s ease-out,
+    filter 0.12s;
+}
+.pp-chunky:hover:not(:disabled) {
+  transform: translateY(calc(var(--px) * -2));
+  filter: brightness(1.07) saturate(1.05);
+}
+.pp-chunky:active:not(:disabled) {
+  transform: translateY(calc(var(--lip) - var(--px) * 1));
+  box-shadow:
+    0 calc(var(--px) * 1) 0 #111,
+    inset 0 calc(var(--px) * -3) 0 rgba(0, 0, 0, 0.2);
+}
+.pp-chunky:disabled {
+  filter: saturate(0.35) brightness(0.92);
+}
+.pp-chunky > * {
+  z-index: 1;
+}
+.pp-chunky > :not(.absolute) {
+  position: relative;
+}
+.pp-chunky > .pp-gloss {
+  position: absolute;
+  z-index: 0;
+  left: 6%;
+  right: 6%;
+  top: 7%;
+  height: 42%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.1) 100%);
+  pointer-events: none;
+}
+
 @keyframes pp-toast-in {
   from {
     transform: translateX(110%);

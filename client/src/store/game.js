@@ -34,8 +34,6 @@ export const useGame = create((set, get) => ({
     maxPlayers: 8,
     message: null,
   },
-  /** Other players in your private lobby, for the Friend Boost. */
-  friends: 0,
   sphinxStock: SPHINX_STOCK_DEFAULT,
   leaderboards: null,
 
@@ -68,7 +66,6 @@ export const useGame = create((set, get) => ({
   setNet: (patch) => set((s) => ({ net: { ...s.net, ...patch } })),
   setZone: (zone) => set({ zone }),
   setPlayable: () => set({ playable: true }),
-  setFriends: (friends) => set({ friends }),
   setSphinxStock: (sphinxStock) => set({ sphinxStock }),
   setLeaderboards: (leaderboards) => set({ leaderboards }),
 

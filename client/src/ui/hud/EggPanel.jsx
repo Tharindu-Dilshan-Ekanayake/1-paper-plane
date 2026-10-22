@@ -1,41 +1,34 @@
 import { useEffect } from 'react'
 
-import { EGGS, MULTI_HATCH, PRODUCTS } from '@shared/balance'
+import { EGGS, MULTI_HATCH } from '@shared/balance'
 import { formatNumber } from '@shared/format'
 
 import { actions } from '../../net/actions'
-import { purchase } from '../../net/premium'
 import { useGame } from '../../store/game'
 import Icon from '../Icon'
 import PetIcon from '../PetIcon'
 import StrokeText from '../StrokeText'
-import { Price } from './parts'
+import { ChunkyButton } from './parts'
 import { GRADIENTS, u } from './style'
 
 function KeyButton({ letter, label, gradient, onClick, active, disabled }) {
   return (
-    <button
-      type="button"
+    <ChunkyButton
+      gradient={gradient}
       onClick={onClick}
       disabled={disabled}
-      className="pp-btn pointer-events-auto flex flex-col items-center justify-center disabled:opacity-50"
-      style={{
-        width: u(128),
-        height: u(104),
-        borderRadius: u(14),
-        background: gradient,
-        border: `${u(5)} solid #111`,
-        boxShadow: `inset 0 ${u(4)} 0 rgba(255,255,255,0.45), 0 ${u(5)} 0 rgba(0,0,0,0.4)${active ? `, 0 0 0 ${u(5)} #fff` : ''}`,
-        lineHeight: 1,
-      }}
+      radius={18}
+      border={5}
+      className="flex-col"
+      style={{ width: u(128), height: u(104), lineHeight: 1, outline: active ? `${u(5)} solid #fff` : 'none' }}
     >
-      <span style={{ fontSize: u(64) }}>
+      <span style={{ fontSize: u(60) }}>
         <StrokeText stroke={u(11)}>{letter}</StrokeText>
       </span>
       <span style={{ fontSize: u(28) }}>
         <StrokeText stroke={u(6)}>{label}</StrokeText>
       </span>
-    </button>
+    </ChunkyButton>
   )
 }
 
@@ -50,7 +43,6 @@ export function EggPanel() {
   const autoHatch = useGame((s) => s.autoHatch)
   const setAutoHatch = useGame((s) => s.setAutoHatch)
   const egg = EGGS[eggId]
-  const premium = Boolean(egg?.cost.product)
 
   // Walking away stops auto-hatching.
   useEffect(() => {
@@ -61,13 +53,13 @@ export function EggPanel() {
     if (!egg || hidden) return undefined
     const onKey = (e) => {
       if (e.repeat) return
-      if (e.code === 'KeyE') premium ? purchase(egg.cost.product) : actions.hatch(eggId, 1)
-      else if (e.code === 'KeyR' && !premium) actions.hatch(eggId, MULTI_HATCH)
-      else if (e.code === 'KeyT' && !premium) setAutoHatch(!autoHatch)
+      if (e.code === 'KeyE') actions.hatch(eggId, 1)
+      else if (e.code === 'KeyR') actions.hatch(eggId, MULTI_HATCH)
+      else if (e.code === 'KeyT') setAutoHatch(!autoHatch)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [egg, eggId, hidden, premium, autoHatch, setAutoHatch])
+  }, [egg, eggId, hidden, autoHatch, setAutoHatch])
 
   if (!egg || hidden) return null
   const cost = egg.cost.wins
@@ -84,17 +76,13 @@ export function EggPanel() {
         }}
       >
         <div className="flex items-center justify-between" style={{ fontSize: u(48), padding: `0 ${u(6)}` }}>
-          <StrokeText stroke={u(9)}>{premium ? 'Demon Egg' : egg.name}</StrokeText>
-          {premium ? (
-            <Price amount={PRODUCTS[egg.cost.product].price} size={40} />
-          ) : (
-            <span className="flex items-center" style={{ gap: u(4) }}>
-              <Icon name="trophy" size={u(48)} />
-              <StrokeText stroke={u(9)} gradient={wins >= cost ? GRADIENTS.gold : 'linear-gradient(180deg,#ffb0a8,#ff4a3b)'}>
-                {formatNumber(cost)}
-              </StrokeText>
-            </span>
-          )}
+          <StrokeText stroke={u(9)}>{eggId === 'demon' ? 'Demon Egg' : egg.name}</StrokeText>
+          <span className="flex items-center" style={{ gap: u(4) }}>
+            <Icon name="trophy" size={u(48)} />
+            <StrokeText stroke={u(9)} gradient={wins >= cost ? GRADIENTS.gold : 'linear-gradient(180deg,#ffb0a8,#ff4a3b)'}>
+              {formatNumber(cost)}
+            </StrokeText>
+          </span>
         </div>
         <div className="grid grid-cols-2" style={{ gap: u(6), marginTop: u(6) }}>
           {egg.pets.map(([petId, chance]) => (
@@ -108,15 +96,9 @@ export function EggPanel() {
         </div>
       </div>
       <div className="flex" style={{ gap: u(14), marginTop: u(-14) }}>
-        {premium ? (
-          <KeyButton letter="E" label="Buy" gradient={GRADIENTS.greenButton} onClick={() => purchase(egg.cost.product)} />
-        ) : (
-          <>
-            <KeyButton letter="E" label="Hatch" gradient={GRADIENTS.greenButton} onClick={() => actions.hatch(eggId, 1)} />
-            <KeyButton letter="R" label="Multi" gradient={GRADIENTS.goldButton} onClick={() => actions.hatch(eggId, MULTI_HATCH)} />
-            <KeyButton letter="T" label="Auto" gradient={GRADIENTS.purpleButton} active={autoHatch} onClick={() => setAutoHatch(!autoHatch)} />
-          </>
-        )}
+        <KeyButton letter="E" label="Hatch" gradient={GRADIENTS.greenButton} onClick={() => actions.hatch(eggId, 1)} />
+        <KeyButton letter="R" label="Multi" gradient={GRADIENTS.goldButton} onClick={() => actions.hatch(eggId, MULTI_HATCH)} />
+        <KeyButton letter="T" label="Auto" gradient={GRADIENTS.purpleButton} active={autoHatch} onClick={() => setAutoHatch(!autoHatch)} />
       </div>
     </div>
   )

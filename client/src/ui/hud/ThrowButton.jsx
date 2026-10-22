@@ -26,9 +26,9 @@ export function ThrowButton() {
 
   if (!visible) return null
   return (
-    <div className="pointer-events-none absolute left-1/2 flex -translate-x-1/2 flex-col items-center" style={{ bottom: u(222) }}>
+    <div className="pointer-events-none absolute left-1/2 flex -translate-x-1/2 flex-col items-center" style={{ bottom: u(236) }}>
       <Icon name="arrowDown" size={u(76)} className="pp-bounce" style={{ marginBottom: u(6) }} />
-      <ChunkyButton gradient={GRADIENTS.greenButton} onClick={() => actions.throwPlane()} style={{ width: u(262), height: u(80) }} radius={4} border={5}>
+      <ChunkyButton gradient={GRADIENTS.greenButton} onClick={() => actions.throwPlane()} style={{ width: u(270), height: u(86) }} radius={22} border={5}>
         <span style={{ fontSize: u(62) }}>
           <StrokeText stroke={u(11)}>THROW</StrokeText>
         </span>

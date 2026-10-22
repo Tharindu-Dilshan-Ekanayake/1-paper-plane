@@ -1,11 +1,9 @@
 import { useGame } from '../../store/game'
-import AutoRebirthToggle from './AutoRebirthToggle'
 import EggPanel from './EggPanel'
 import FlightOverlay from './FlightOverlay'
 import InteractPrompt from './InteractPrompt'
 import LeftMenu from './LeftMenu'
 import PowerBar from './PowerBar'
-import RightButtons from './RightButtons'
 import StatsPanel from './StatsPanel'
 import ThrowButton from './ThrowButton'
 import Toasts from './Toasts'
@@ -13,8 +11,8 @@ import TopBar from './TopBar'
 import TopCenter from './TopCenter'
 
 /**
- * The heads-up display, laid out like the reference: menu tiles on the left, stats
- * bottom-left, power and level bottom-centre, rewards and passes on the right.
+ * The heads-up display: the logo's corner top-left, your name tag top-right, menu tiles
+ * on the left, stats bottom-left, and power, level and power packs bottom-centre.
  *
  * The root ignores pointer events so the canvas and joystick underneath keep working;
  * only the buttons themselves opt back in. While a panel is open the HUD steps aside,
@@ -33,13 +31,9 @@ export function HUD() {
             of the throw cost a visible hitch on slow phones. */}
         <div className="contents" style={{ visibility: watching ? 'hidden' : 'visible' }}>
           <LeftMenu />
-          <RightButtons />
         </div>
         <StatsPanel />
         <PowerBar />
-        <div className="contents" style={{ visibility: watching ? 'hidden' : 'visible' }}>
-          <AutoRebirthToggle />
-        </div>
         <ThrowButton />
         <InteractPrompt />
         <EggPanel />

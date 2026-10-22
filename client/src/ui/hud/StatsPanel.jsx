@@ -1,5 +1,4 @@
 import { formatClock, formatNumber } from '@shared/format'
-import { friendBoost } from '@shared/logic'
 
 import { useGame } from '../../store/game'
 import useNow from '../useNow'
@@ -50,41 +49,16 @@ function Boosts() {
   )
 }
 
-/** Bottom-left: Wins and Rebirths with the Friend Boost line under them. */
+/** Bottom-left: Wins and Rebirths, with any running potions above them. */
 export function StatsPanel() {
   const wins = useGame((s) => s.profile.wins - s.pendingWins)
   const rebirths = useGame((s) => s.profile.rebirths)
-  const friends = useGame((s) => s.friends)
-  const openPanel = useGame((s) => s.openPanel)
 
   return (
-    <div className="pointer-events-none absolute flex flex-col" style={{ left: u(8), bottom: u(6) }}>
+    <div className="pointer-events-none absolute flex flex-col" style={{ left: u(8), bottom: u(10) }}>
       <Boosts />
       <StatRow icon="trophy" value={formatNumber(wins)} />
       <StatRow icon="rebirth" value={formatNumber(rebirths)} />
-      <div className="flex items-center" style={{ gap: u(10), marginTop: u(2) }}>
-        <span style={{ fontSize: u(30) }}>
-          <StrokeText stroke={u(7)} className="italic">
-            Friend Boost: +{Math.round(friendBoost(friends) * 100)}%
-          </StrokeText>
-        </span>
-        <button
-          type="button"
-          onClick={() => openPanel('lobby')}
-          className="pp-btn pointer-events-auto flex items-center justify-center"
-          style={{
-            width: u(36),
-            height: u(36),
-            borderRadius: u(5),
-            background: GRADIENTS.greenButton,
-            border: `${u(3)} solid #111`,
-            fontSize: u(32),
-          }}
-          aria-label="Invite friends"
-        >
-          <StrokeText stroke={u(5)}>+</StrokeText>
-        </button>
-      </div>
     </div>
   )
 }

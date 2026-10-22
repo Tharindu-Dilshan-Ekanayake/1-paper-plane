@@ -36,12 +36,6 @@ export function openDatabase(path = DB_PATH) {
     CREATE INDEX IF NOT EXISTS profiles_playtime ON profiles (playtime DESC);
     CREATE INDEX IF NOT EXISTS profiles_power ON profiles (best_power DESC);
     CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-    CREATE TABLE IF NOT EXISTS purchases (
-      transaction_id TEXT PRIMARY KEY,
-      player_id TEXT NOT NULL,
-      product_id TEXT NOT NULL,
-      created_at INTEGER NOT NULL
-    );
   `)
   return db
 }
@@ -118,12 +112,4 @@ export function takeSphinx() {
     .prepare("INSERT INTO kv (key, value) VALUES ('sphinxStock', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
     .run(String(stock - 1))
   return true
-}
-
-/** Records a payment; false if this transaction was already processed. */
-export function recordPurchase(transactionId, playerId, productId) {
-  const result = requireDb()
-    .prepare('INSERT OR IGNORE INTO purchases (transaction_id, player_id, product_id, created_at) VALUES (?, ?, ?, ?)')
-    .run(transactionId, playerId, productId, Date.now())
-  return result.changes > 0
 }

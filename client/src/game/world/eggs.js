@@ -7,7 +7,7 @@ import { STYLE } from '../materials'
 
 /**
  * Egg stands: a blue-and-white pedestal with the egg floating above it, plus the big
- * premium Demon Egg on its dark plinth and the Sphinx showcase. Pedestals are blocks,
+ * big Demon Egg on its dark plinth and the Sphinx showcase. Pedestals are blocks,
  * eggs are merged props - both ride along in the world's existing draw calls.
  */
 

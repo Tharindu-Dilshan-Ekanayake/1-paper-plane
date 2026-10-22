@@ -71,9 +71,6 @@ function attachRoom(room, identity, Callbacks) {
       players,
       message: null,
     })
-    // Friend Boost counts the friends in your private lobby.
-    const friends = isPrivate ? players - 1 : 0
-    if (getGame().friends !== friends) getGame().setFriends(friends)
   }
 
   room.onMessage('*', (type, payload) => {

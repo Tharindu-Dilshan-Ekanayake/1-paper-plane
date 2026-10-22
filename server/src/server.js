@@ -3,9 +3,7 @@ import express from 'express'
 import { defineRoom, defineServer } from '@colyseus/core'
 import { WebSocketTransport } from '@colyseus/ws-transport'
 
-import { PRODUCTS } from '../../shared/balance.js'
-import { grantProduct, normalizeProfile } from '../../shared/logic.js'
-import { loadProfile, openDatabase, recordPurchase, saveProfile } from './db.js'
+import { openDatabase } from './db.js'
 import { startLeaderboards } from './leaderboards.js'
 import { activePlayers } from './registry.js'
 import { GameRoom } from './rooms/GameRoom.js'
@@ -39,38 +37,6 @@ function routes(app) {
     // derive the user from the *verified* claims, not from the body.
     res.json({ accessToken: 'stub', user: { legionId: req.body?.user?._id } })
   })
-
-  /**
-   * Bux purchase webhook. Responds 200 immediately - the platform retries anything
-   * else - and grants the product to the player, live if they're online, otherwise
-   * straight into their save.
-   *
-   * Expected body: `{ transactionId, userId, productId }`.
-   * TODO: confirm field names against Bloxity's webhook docs.
-   */
-  app.post('/api/legion-webhook', (req, res) => {
-    const secret = process.env.LEGION_WEBHOOK_SECRET
-    if (secret && req.get('x-legion-webhook-secret') !== secret) {
-      res.sendStatus(401)
-      return
-    }
-    res.sendStatus(200)
-
-    const { transactionId, userId, productId } = req.body || {}
-    if (!transactionId || !userId || !PRODUCTS[productId]) {
-      console.warn('[webhook] ignoring malformed payload', req.body)
-      return
-    }
-    const playerId = String(userId)
-    if (!recordPurchase(String(transactionId), playerId, productId)) return // duplicate delivery
-
-    const active = activePlayers.get(playerId)
-    if (active && active.room.grantTo(playerId, productId)) return
-    const profile = normalizeProfile(loadProfile(playerId, 'Player'), playerId, null)
-    const result = grantProduct(profile, productId)
-    if (result.ok) saveProfile(profile)
-    else console.warn(`[webhook] could not grant ${productId} to ${playerId}: ${result.error}`)
-  })
 }
 
 openDatabase()
@@ -86,4 +52,4 @@ const server = defineServer({
 
 await server.listen(PORT)
 startLeaderboards()
-console.log(`[server] listening on http://localhost:${PORT} (mock purchases: ${process.env.PREMIUM_MOCK === '1' ? 'on' : 'off'})`)
+console.log(`[server] listening on http://localhost:${PORT}`)

@@ -15,11 +15,11 @@ export const GRADIENTS = {
   greenButton: 'linear-gradient(180deg, #b6ff6a 0%, #57e83a 50%, #19b52a 100%)',
   greyButton: 'linear-gradient(180deg, #e2e6ea 0%, #a9b0b8 55%, #7d858e 100%)',
   redButton: 'linear-gradient(180deg, #ff8a7a 0%, #ff3b3b 50%, #d4142a 100%)',
-  autoThrow: 'linear-gradient(180deg, #7eeaff 0%, #1fb1ff 45%, #0f73e6 100%)',
   rainbow:
     'linear-gradient(90deg, #ff3b5c 0%, #ff9a1f 18%, #ffe53b 34%, #4ef05a 50%, #2fc6ff 66%, #6a5cff 82%, #ff4fd8 100%)',
   barFill: 'linear-gradient(180deg, #ffe76b 0%, #ffc21a 50%, #ff9500 100%)',
-  priceGreen: 'linear-gradient(180deg, #d9ff9a 0%, #7dff4a 50%, #2fd12f 100%)',
+  priceShort: 'linear-gradient(180deg, #ffc2b8 0%, #ff6a55 50%, #e2242c 100%)',
+  slate: 'linear-gradient(180deg, #7c8cb0 0%, #4a5778 50%, #2c344d 100%)',
   rewardCard: 'linear-gradient(180deg, #ffe45c 0%, #ffbf1f 55%, #ff9a12 100%)',
 }
 

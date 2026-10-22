@@ -16,7 +16,6 @@ const PATCH_HZ = 15
 const SIM_HZ = 10
 /** Allowance on top of max speed for a position update to be accepted. */
 const MOVE_SLACK = 2.5
-const MOCK_PURCHASES = process.env.PREMIUM_MOCK === '1'
 /** Close code used when the same player joins somewhere else (4000-4010 are Colyseus's own). */
 const DUPLICATE_LOGIN = 4100
 
@@ -100,8 +99,6 @@ export class GameRoom extends Room {
       now,
       emit: (type, payload) => client.send(type, payload),
       getPosition: () => player,
-      getFriends: () => (this.state.isPrivate ? this.clients.length - 1 : 0),
-      mockPurchases: MOCK_PURCHASES,
       onPurchase: (productId) => {
         if (productId !== 'sphinx') return true
         const ok = takeSphinx()
@@ -178,17 +175,6 @@ export class GameRoom extends Room {
     }
     client.send('kicked', { reason })
     client.leave(DUPLICATE_LOGIN)
-  }
-
-  /** Grants a paid product to whoever owns `playerId`, if they're in this room. */
-  grantTo(playerId, productId) {
-    for (const [sessionId, member] of this.members) {
-      if (member.playerId !== playerId) continue
-      member.session.grant(productId, Date.now())
-      this.syncPlayer(sessionId)
-      return true
-    }
-    return false
   }
 
   saveAll() {

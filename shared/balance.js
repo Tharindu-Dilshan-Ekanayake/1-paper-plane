@@ -17,7 +17,7 @@ export const LEVEL_GAIN = 0.15
 
 /**
  * Training lanes, west to east order matches world.js lane indices.
- * `rebirths` = rebirths needed; `product` = premium pass that unlocks it instead.
+ * `rebirths` = rebirths needed; `product` = the SHOP item that unlocks it instead.
  */
 export const LANES = [
   { id: 'target', name: 'Target', mult: 1, rebirths: 0 },
@@ -131,15 +131,15 @@ export const PETS = {
 }
 
 /**
- * Eggs. `cost.wins` buys with Wins; `cost.product` is premium only. `pets` are
- * [petId, weight] - weights are percentages and sum to 100.
+ * Eggs, bought with Wins. `pets` are [petId, weight] - weights are percentages and
+ * sum to 100.
  */
 export const EGGS = {
   basic: { name: 'Basic', cost: { wins: 25 }, pets: [['cat', 45], ['dog', 30], ['bunny', 20], ['bear', 5]] },
   meadow: { name: 'Meadow', cost: { wins: 350 }, pets: [['cow', 45], ['parrot', 30], ['fox', 20], ['tiger', 5]] },
   sunset: { name: 'Sunset', cost: { wins: 4000 }, pets: [['flamingo', 45], ['turtle', 30], ['owl', 20], ['phoenix', 5]] },
   unicorn: { name: 'Unicorn', cost: { wins: 25000 }, pets: [['pony', 50], ['unicorn', 35], ['pegasus', 15]] },
-  demon: { name: 'Demon', cost: { product: 'demonEgg' }, pets: [['imp', 50], ['bat', 30], ['demon', 15], ['hellhound', 5]] },
+  demon: { name: 'Demon', cost: { wins: 60000 }, pets: [['imp', 50], ['bat', 30], ['demon', 15], ['hellhound', 5]] },
 }
 
 export const MAX_EQUIPPED_PETS = 3
@@ -160,9 +160,6 @@ export const ITEMS = {
   eggDemon: { name: 'Demon Egg', kind: 'egg', egg: 'demon' },
 }
 
-/** Friend Boost: +10% Power per friend in your lobby, capped. */
-export const FRIEND_BOOST_PER_FRIEND = 0.1
-export const FRIEND_BOOST_MAX = 0.5
 
 /** 7-day cycle; day N unlocks N x 24h after the cycle started. */
 export const DAILY_INTERVAL_MS = 24 * 60 * 60 * 1000
@@ -200,21 +197,18 @@ export const WORLD2_POWER = 2.5e6
 // --- Premium ----------------------------------------------------------------------
 
 /**
- * Everything bought with premium currency (Bux). `pass` = permanent; `consumable` =
- * granted each purchase. Prices are what the HUD shows.
+ * The shop. Wins are the game's only currency: everything here, like frisbees and
+ * eggs, is bought with them. `pass` = permanent unlock; `consumable` = grants every
+ * time. Power packs are priced at a few throws' Wins for a player at that power, so
+ * they speed you up without replacing the training loop.
  */
-export const PRODUCTS = {
-  autoThrow: { name: 'Auto Throw', price: 19, kind: 'pass' },
-  x2Power: { name: 'x2 Power', price: 2, kind: 'pass' },
-  x2Wins: { name: 'x2 Wins', price: 19, kind: 'pass' },
-  power100k: { name: '+100K Power', price: 11, kind: 'consumable', grant: { power: 1e5 } },
-  power1m: { name: '+1M Power', price: 25, kind: 'consumable', grant: { power: 1e6 } },
-  power10m: { name: '+10M Power', price: 49, kind: 'consumable', grant: { power: 1e7 } },
-  skipRebirth: { name: 'Skip Rebirth', price: 19, kind: 'consumable' },
-  laneVeryOp: { name: 'VERY OP! Lane', price: 45, kind: 'pass' },
-  laneBestOverall: { name: 'BEST OVERALL! Lane', price: 279, kind: 'pass' },
-  demonEgg: { name: 'Demon Egg', price: 45, kind: 'consumable', grant: { hatch: 'demon' } },
-  sphinx: { name: 'Sphinx', price: 395, kind: 'consumable', grant: { pet: 'sphinx' }, stock: 1000 },
+export const SHOP = {
+  power100k: { name: '+100K Power', price: 5000, kind: 'consumable', grant: { power: 1e5 } },
+  power1m: { name: '+1M Power', price: 40000, kind: 'consumable', grant: { power: 1e6 } },
+  power10m: { name: '+10M Power', price: 200000, kind: 'consumable', grant: { power: 1e7 } },
+  laneVeryOp: { name: 'VERY OP! Lane', price: 150000, kind: 'pass' },
+  laneBestOverall: { name: 'BEST OVERALL! Lane', price: 2000000, kind: 'pass' },
+  sphinx: { name: 'Sphinx', price: 2500000, kind: 'consumable', grant: { pet: 'sphinx' }, stock: 1000 },
 }
 
 /** Sphinx stock shown before the server reports the live count. */

@@ -35,8 +35,6 @@ export function createLocalServer({ id, name, onEvent }) {
     // would never see a change (same reference) and could edit server state.
     emit: (type, payload) => onEvent(type, payload ? structuredClone(payload) : payload),
     getPosition: () => runtime.player.position,
-    // Offline there's no payment system to protect; premium items are free test grants.
-    mockPurchases: true,
   })
 
   const save = () => {

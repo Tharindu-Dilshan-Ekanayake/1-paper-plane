@@ -2,26 +2,18 @@ import { useGame } from '../../store/game'
 import DailyRewardsPanel from './DailyRewardsPanel'
 import ItemsPanel from './ItemsPanel'
 import LeaderboardsPanel from './LeaderboardsPanel'
-import LobbyPanel from './LobbyPanel'
 import PetsPanel from './PetsPanel'
-import PurchasePanel from './PurchasePanel'
 import RebirthPanel from './RebirthPanel'
-import RewardsPanel from './RewardsPanel'
-import SettingsPanel from './SettingsPanel'
 import StorePanel from './StorePanel'
 import WelcomeBackPanel from './WelcomeBackPanel'
 
 const PANELS = {
   pets: PetsPanel,
   rebirth: RebirthPanel,
-  purchase: PurchasePanel,
   daily: DailyRewardsPanel,
-  rewards: RewardsPanel,
   items: ItemsPanel,
   offline: WelcomeBackPanel,
-  lobby: LobbyPanel,
   store: StorePanel,
-  settings: SettingsPanel,
   leaderboards: LeaderboardsPanel,
 }
 

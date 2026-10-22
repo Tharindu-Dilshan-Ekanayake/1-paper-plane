@@ -7,8 +7,6 @@ import {
   EGGS,
   flightDuration,
   FREE_REWARD,
-  FRIEND_BOOST_MAX,
-  FRIEND_BOOST_PER_FRIEND,
   ITEMS,
   LANES,
   LEVEL_GAIN,
@@ -22,9 +20,9 @@ import {
   PETS,
   PLANES,
   PLAYTIME_REWARDS,
-  PRODUCTS,
   RARITIES,
   rebirthMultiplier,
+  SHOP,
   THROW_RECOVERY,
   TRAIN_INTERVAL,
   TROPHY_FIRST,
@@ -73,7 +71,7 @@ export function createProfile(id, name) {
     stats: { throws: 0, trains: 0, bestDistance: 0, playtime: 0, bestPower: 0 },
     lastLane: -1,
     lastSeen: 0,
-    settings: { autoThrow: false, autoRebirth: false },
+    settings: { autoRebirth: false },
   }
 }
 
@@ -126,34 +124,25 @@ export function petMultiplier(profile) {
   return total
 }
 
-export const friendBoost = (friends) =>
-  Math.min(FRIEND_BOOST_MAX, Math.max(0, friends) * FRIEND_BOOST_PER_FRIEND)
-
 export const isBoostActive = (profile, kind, now) => (profile.boosts[kind] || 0) > now
 
-/** Gamepass, potion and friends - everything but lane, rebirths and pets. */
-export function powerBoostMultiplier(profile, now, friends = 0) {
-  let m = 1 + friendBoost(friends)
-  if (profile.passes.x2Power) m *= 2
-  if (isBoostActive(profile, 'power', now)) m *= 2
-  return m
+/** The Power potion - everything but lane, rebirths and pets. */
+export function powerBoostMultiplier(profile, now) {
+  return isBoostActive(profile, 'power', now) ? 2 : 1
 }
 
 export function winsMultiplier(profile, now) {
-  let m = 1
-  if (profile.passes.x2Wins) m *= 2
-  if (isBoostActive(profile, 'wins', now)) m *= 2
-  return m
+  return isBoostActive(profile, 'wins', now) ? 2 : 1
 }
 
 /** What the HUD shows as "Multiplier": lane x rebirths x boosts (pets not included). */
-export function hudMultiplier(profile, laneIndex, now, friends = 0) {
+export function hudMultiplier(profile, laneIndex, now) {
   const area = laneIndex >= 0 && LANES[laneIndex] ? LANES[laneIndex].mult : 1
-  return area * rebirthMultiplier(profile.rebirths) * powerBoostMultiplier(profile, now, friends)
+  return area * rebirthMultiplier(profile.rebirths) * powerBoostMultiplier(profile, now)
 }
 
 /** Power gained by one training throw in `laneIndex`. */
-export function trainGain(profile, laneIndex, now, friends = 0) {
+export function trainGain(profile, laneIndex, now) {
   const lane = LANES[laneIndex]
   if (!lane) return 0
   const plane = planeById(profile.equippedPlane)
@@ -163,7 +152,7 @@ export function trainGain(profile, laneIndex, now, friends = 0) {
     lane.mult *
     rebirthMultiplier(profile.rebirths) *
     petMultiplier(profile) *
-    powerBoostMultiplier(profile, now, friends)
+    powerBoostMultiplier(profile, now)
   return Math.max(1, Math.round(raw))
 }
 
@@ -179,9 +168,9 @@ export function rebirthProgress(profile) {
   return Math.max(0, Math.min(1, done / Math.max(1, cap - 1)))
 }
 
-export function applyTrain(profile, laneIndex, now, friends = 0) {
+export function applyTrain(profile, laneIndex, now) {
   if (!isLaneUnlocked(profile, laneIndex)) return { ok: false, error: 'Lane locked' }
-  const gain = trainGain(profile, laneIndex, now, friends)
+  const gain = trainGain(profile, laneIndex, now)
   profile.power += gain
   profile.stats.trains += 1
   profile.stats.bestPower = Math.max(profile.stats.bestPower, profile.power)
@@ -203,16 +192,13 @@ export function applyTrain(profile, laneIndex, now, friends = 0) {
 
 /**
  * Rebirth: +1 rebirth, Power and levels reset (Wins, planes and pets stay).
- * `skip` is the premium version: no level requirement and nothing is reset.
  */
-export function applyRebirth(profile, { skip = false } = {}) {
-  if (!skip && !isMaxLevel(profile)) return { ok: false, error: `Reach level ${levelCap(profile.rebirths)} first!` }
+export function applyRebirth(profile) {
+  if (!isMaxLevel(profile)) return { ok: false, error: `Reach level ${levelCap(profile.rebirths)} first!` }
   profile.rebirths += 1
-  if (!skip) {
-    profile.power = 0
-    profile.level = 1
-    profile.levelProgress = 0
-  }
+  profile.power = 0
+  profile.level = 1
+  profile.levelProgress = 0
   return { ok: true, rebirths: profile.rebirths }
 }
 
@@ -469,20 +455,22 @@ export function claimFreeReward(profile, session, opts) {
   return { ...applyGrant(profile, grant, opts), grant }
 }
 
-// --- Premium ------------------------------------------------------------------------
+// --- Shop ---------------------------------------------------------------------------
 
-/** Grants a premium product after payment has been confirmed. */
-export function grantProduct(profile, productId, opts = {}) {
-  const product = PRODUCTS[productId]
-  if (!product) return { ok: false, error: 'Unknown product' }
-  if (product.kind === 'pass') {
-    if (profile.passes[productId]) return { ok: false, error: 'Already owned' }
+/** Buys a SHOP item with Wins. */
+export function buyShopItem(profile, productId, opts = {}) {
+  const item = SHOP[productId]
+  if (!item) return { ok: false, error: 'Unknown item' }
+  if (item.kind === 'pass' && profile.passes[productId]) return { ok: false, error: 'Already owned' }
+  if (profile.wins < item.price) return { ok: false, error: 'Not enough Wins!' }
+  if (item.kind === 'pass') {
+    profile.wins -= item.price
     profile.passes[productId] = true
-    if (productId === 'autoThrow') profile.settings.autoThrow = true
     return { ok: true, productId, pass: true }
   }
-  if (productId === 'skipRebirth') return { ...applyRebirth(profile, { skip: true }), productId }
-  return { ...applyGrant(profile, product.grant || {}, opts), productId }
+  const result = applyGrant(profile, item.grant || {}, opts)
+  if (result.ok) profile.wins -= item.price
+  return { ...result, productId }
 }
 
 // --- Offline progress -------------------------------------------------------------
@@ -493,8 +481,8 @@ export function applyOfflineProgress(profile, now) {
   if (profile.lastLane < 0 || away < OFFLINE_MIN_MS) return null
   if (!isLaneUnlocked(profile, profile.lastLane)) return null
   const throws = Math.floor(away / 1000 / TRAIN_INTERVAL)
-  // Potions don't run while you're away, so no boosts beyond passes.
-  const gain = trainGain(profile, profile.lastLane, 0, 0)
+  // Potions don't run while you're away.
+  const gain = trainGain(profile, profile.lastLane, 0)
   const power = Math.floor(throws * gain * OFFLINE_RATE)
   if (power <= 0) return null
   profile.power += power

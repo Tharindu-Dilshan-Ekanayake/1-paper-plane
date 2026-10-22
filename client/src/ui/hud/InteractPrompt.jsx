@@ -1,12 +1,12 @@
 import { useEffect } from 'react'
 
-import { LANES, PLANES, PRODUCTS, WORLD2_POWER } from '@shared/balance'
+import { LANES, PLANES, SHOP, WORLD2_POWER } from '@shared/balance'
 import { formatNumber } from '@shared/format'
 import { isLaneUnlocked } from '@shared/logic'
 
 import { padState } from '../../game/labels/lobbyLabels'
 import { actions } from '../../net/actions'
-import { purchase } from '../../net/premium'
+import { buy } from '../../net/shop'
 import { useGame } from '../../store/game'
 import { u } from './style'
 
@@ -33,13 +33,13 @@ function usePrompt() {
   }
 
   if (atSphinx) {
-    return { title: 'Sphinx - Limited!', action: `Buy - ${PRODUCTS.sphinx.price} Bux`, run: () => purchase('sphinx') }
+    return { title: 'Sphinx - Limited!', action: `Buy - ${formatNumber(SHOP.sphinx.price)} Wins`, run: () => buy('sphinx') }
   }
 
   if (laneLocked) {
     const lane = LANES[laneNear]
     if (lane.product) {
-      return { title: `${lane.name} - x${lane.mult} Power`, action: `Unlock - ${PRODUCTS[lane.product].price} Bux`, run: () => purchase(lane.product) }
+      return { title: `${lane.name} - x${lane.mult} Power`, action: `Unlock - ${formatNumber(SHOP[lane.product].price)} Wins`, run: () => buy(lane.product) }
     }
     const word = lane.rebirths === 1 ? 'Rebirth' : 'Rebirths'
     return { title: `${lane.name} - x${lane.mult} Power`, action: `Locked: needs ${lane.rebirths} ${word}`, run: null }

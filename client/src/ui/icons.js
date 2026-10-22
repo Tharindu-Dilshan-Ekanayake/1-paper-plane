@@ -89,17 +89,6 @@ const muscle = svg(
   ]),
 )
 
-const bux = svg(
-  `<path d="M50 6l38 22v44L50 94 12 72V28z" fill="url(#bx-g)" stroke="${OUT}" stroke-width="6" stroke-linejoin="round"/>
-  <path d="M50 27l19 11v24L50 73 31 62V38z" fill="#0d7a2c" stroke="#b9ffc8" stroke-width="7" stroke-linejoin="round"/>
-  <path d="M22 32l26-15" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".6"/>`,
-  vgrad('bx-g', [
-    [0, '#8dff7a'],
-    [0.5, '#2fd14a'],
-    [1, '#119934'],
-  ]),
-)
-
 const pets = svg(
   `<path d="M17 40L22 8l24 22zM83 40L78 8 54 30z" fill="url(#pt-o)" stroke="${OUT}" stroke-width="5.5" stroke-linejoin="round"/>
   <path d="M24 34l2-15 11 10zM76 34l-2-15-11 10z" fill="#ffc2c9"/>
@@ -150,26 +139,6 @@ const store = svg(
   ]),
 )
 
-const gift = svg(
-  `<path d="M50 28C40 6 18 8 22 22c3 9 17 8 28 6zM50 28C60 6 82 8 78 22c-3 9-17 8-28 6z" fill="url(#gf-y)" stroke="${OUT}" stroke-width="5.5" stroke-linejoin="round"/>
-  <rect x="10" y="44" width="80" height="48" rx="7" fill="url(#gf-p)" stroke="${OUT}" stroke-width="6"/>
-  <rect x="6" y="28" width="88" height="20" rx="6" fill="url(#gf-p2)" stroke="${OUT}" stroke-width="6"/>
-  <path d="M41 28v64h18V28z" fill="url(#gf-y)" stroke="${OUT}" stroke-width="5" stroke-linejoin="round"/>
-  <path d="M16 54v28" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".5"/>`,
-  vgrad('gf-p', [
-    [0, '#ff6fc3'],
-    [1, '#e3168f'],
-  ]) +
-    vgrad('gf-p2', [
-      [0, '#ff8fd2'],
-      [1, '#f0369f'],
-    ]) +
-    vgrad('gf-y', [
-      [0, '#fff27a'],
-      [1, '#ffb01e'],
-    ]),
-)
-
 const calendar = svg(
   `<rect x="10" y="16" width="80" height="76" rx="12" fill="#ffffff" stroke="${OUT}" stroke-width="6"/>
   <path d="M10 28c0-7 5-12 12-12h56c7 0 12 5 12 12v12H10z" fill="url(#cl-r)" stroke="${OUT}" stroke-width="6" stroke-linejoin="round"/>
@@ -186,15 +155,6 @@ const star = svg(
   `<path d="M50 8l12 25 27 4-20 19 5 27-24-13-24 13 5-27-20-19 27-4z" fill="#ffffff" stroke="${OUT}" stroke-width="6" stroke-linejoin="round"/>`,
 )
 
-const gear = svg(
-  `<path d="M43 6h14l3 12 9 4 11-7 10 10-7 11 4 9 12 3v14l-12 3-4 9 7 11-10 10-11-7-9 4-3 12H43l-3-12-9-4-11 7-10-10 7-11-4-9-12-3V43l12-3 4-9-7-11 10-10 11 7 9-4z" fill="url(#gr-b)" stroke="${OUT}" stroke-width="5" stroke-linejoin="round"/>
-  <circle cx="50" cy="50" r="15" fill="#e8f4ff" stroke="${OUT}" stroke-width="5"/>`,
-  vgrad('gr-b', [
-    [0, '#6cc3ff'],
-    [1, '#1d7fe0'],
-  ]),
-)
-
 /** A frisbee seen at an angle: blue top with white rings, darker rim under it. */
 const frisbee = svg(
   `<ellipse cx="50" cy="58" rx="45" ry="23" fill="#1453b8" stroke="${OUT}" stroke-width="6"/>
@@ -206,17 +166,6 @@ const frisbee = svg(
     [0, '#7fd2ff'],
     [1, '#2f7fe6'],
   ]),
-)
-
-const autoThrow = svg(
-  `<path d="M20 52a30 30 0 0 1 50-24" fill="none" stroke="${OUT}" stroke-width="14" stroke-linecap="round"/>
-  <path d="M20 52a30 30 0 0 1 50-24" fill="none" stroke="#7fe7ff" stroke-width="7" stroke-linecap="round"/>
-  <path d="M62 14l20 10-16 14z" fill="#7fe7ff" stroke="${OUT}" stroke-width="4.5" stroke-linejoin="round"/>
-  <path d="M80 48a30 30 0 0 1-50 24" fill="none" stroke="${OUT}" stroke-width="14" stroke-linecap="round"/>
-  <path d="M80 48a30 30 0 0 1-50 24" fill="none" stroke="#7fe7ff" stroke-width="7" stroke-linecap="round"/>
-  <path d="M38 86L18 76l16-14z" fill="#7fe7ff" stroke="${OUT}" stroke-width="4.5" stroke-linejoin="round"/>
-  <ellipse cx="50" cy="52" rx="20" ry="9" fill="#fff" stroke="${OUT}" stroke-width="4"/>
-  <ellipse cx="50" cy="51" rx="9" ry="3.6" fill="#7fe7ff"/>`,
 )
 
 /** A round potion flask with a cork, filled with `liquid` and a small badge icon. */
@@ -262,21 +211,6 @@ export function eggSvg(base, dark, spot) {
   )
 }
 
-const lock = svg(
-  `<path d="M30 46V32c0-26 40-26 40 0v14" fill="none" stroke="${OUT}" stroke-width="16"/>
-  <path d="M30 46V32c0-26 40-26 40 0v14" fill="none" stroke="#c7d2de" stroke-width="7"/>
-  <rect x="16" y="42" width="68" height="50" rx="10" fill="url(#lk-g)" stroke="${OUT}" stroke-width="6"/>
-  <circle cx="50" cy="62" r="7" fill="${OUT}"/><path d="M47 64h6l2 14h-10z" fill="${OUT}"/>`,
-  vgrad('lk-g', GOLD),
-)
-
-const users = svg(
-  `<circle cx="36" cy="32" r="16" fill="#fff" stroke="${OUT}" stroke-width="6"/>
-  <path d="M8 84c0-18 12-30 28-30s28 12 28 30z" fill="#fff" stroke="${OUT}" stroke-width="6" stroke-linejoin="round"/>
-  <circle cx="68" cy="30" r="13" fill="#c9e6ff" stroke="${OUT}" stroke-width="5"/>
-  <path d="M60 52c4-2 6-2 8-2 14 0 24 10 24 26H68" fill="#c9e6ff" stroke="${OUT}" stroke-width="5" stroke-linejoin="round"/>`,
-)
-
 const close = svg(
   `<path d="M24 24l52 52M76 24L24 76" stroke="${OUT}" stroke-width="22" stroke-linecap="round"/>
   <path d="M24 24l52 52M76 24L24 76" stroke="#fff" stroke-width="11" stroke-linecap="round"/>`,
@@ -295,11 +229,6 @@ const portal = svg(
   `<circle cx="50" cy="50" r="42" fill="url(#po-g)" stroke="${OUT}" stroke-width="6"/>
   <path d="M50 50c0-10 14-10 14 0 0 16-28 16-28 0 0-22 42-22 42 0 0 28-56 28-56 0" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>`,
   `<radialGradient id="po-g"><stop offset="0" stop-color="#b8f3ff"/><stop offset="1" stop-color="#2f7fe6"/></radialGradient>`,
-)
-
-const sound = svg(
-  `<path d="M12 38h16l22-18v60L28 62H12z" fill="#fff" stroke="${OUT}" stroke-width="6" stroke-linejoin="round"/>
-  <path d="M62 34c8 8 8 24 0 32M72 24c14 14 14 38 0 52" fill="none" stroke="${OUT}" stroke-width="7" stroke-linecap="round"/>`,
 )
 
 const starGold = svg(
@@ -323,25 +252,18 @@ export const ICON_SVGS = {
   trophy,
   rebirth,
   muscle,
-  bux,
   pets,
   items,
   store,
-  gift,
   calendar,
   star,
-  gear,
   frisbee,
-  autoThrow,
   potionWins,
   potionPower,
-  lock,
-  users,
   close,
   arrowDown,
   check,
   portal,
-  sound,
 }
 
 /** Egg colours by egg id, shared by the icons and the 3D eggs. */
