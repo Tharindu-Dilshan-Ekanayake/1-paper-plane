@@ -1,53 +1,28 @@
-import { SphereGeometry } from 'three'
-
 import { EGG_STANDS, FREE_REWARD, SPHINX_STAND } from '@shared/world'
 
-import { EGG_COLORS } from '../../ui/icons'
 import { STYLE } from '../materials'
 
 /**
- * Egg stands: a blue-and-white pedestal with the egg floating above it, plus the big
- * big Demon Egg on its dark plinth and the Sphinx showcase. Pedestals are blocks,
- * eggs are merged props - both ride along in the world's existing draw calls.
+ * Egg stands: a blue-and-white pedestal ringed in light, plus the big Demon Egg's dark
+ * plinth (with its horns and wings) and the Sphinx showcase. Blocks and merged props,
+ * riding along in the world's existing draw calls; the eggs themselves float above in
+ * EggDisplays.
  */
 
-const EGG = new SphereGeometry(1, 22, 16)
-const SPOT = new SphereGeometry(1, 10, 8)
+/** Each stand's light ring, in its egg's colour. */
+const RING = { basic: '#7fe2ff', meadow: '#5cff6a', sunset: '#ffb347', unicorn: '#ff9cf4' }
 
 /** Height of an egg's centre above the ground. */
 export const eggHeight = (stand) => (stand.big ? 3.4 : 2.6)
 
-function egg(props, x, y, z, scale, [base, , spot], style = STYLE.SMOOTH) {
-  props.add(EGG, { position: [x, y, z], scale: [scale, scale * 1.28, scale], color: base, style })
-  const spots = [
-    [0.55, 0.2, 0.62, 0.3],
-    [-0.62, 0.45, 0.42, 0.24],
-    [0.1, -0.35, 0.95, 0.26],
-    [-0.35, -0.2, 0.86, 0.2],
-    [0.8, -0.5, 0.15, 0.22],
-  ]
-  for (const [sx, sy, sz, r] of spots) {
-    const len = Math.hypot(sx, sy / 1.28, sz)
-    props.add(SPOT, {
-      position: [x + (sx / len) * scale * 0.97, y + (sy / len) * scale * 1.28 * 0.97, z + (sz / len) * scale * 0.97],
-      scale: [r * scale, r * scale, r * scale * 0.35],
-      rotation: [0, Math.atan2(sx, sz), 0],
-      color: spot,
-      style: style === STYLE.LAVA ? STYLE.GLOW : STYLE.SMOOTH,
-    })
-  }
-}
-
 export function buildEggStands(blocks, props) {
   for (const stand of EGG_STANDS) {
-    const colors = EGG_COLORS[stand.eggId]
     if (stand.big) {
       // Demon Egg: dark stepped plinth with a glowing rim, horns and bat wings.
       blocks.addOn(stand.x, 0, stand.z, 4.2, 0.7, 4.2, '#24141f')
       blocks.addOn(stand.x, 0.7, stand.z, 3.6, 0.35, 3.6, '#ff3b1e', STYLE.LAVA)
       blocks.addOn(stand.x, 1.05, stand.z, 3.2, 0.3, 3.2, '#3a1a2a')
       const y = eggHeight(stand)
-      egg(props, stand.x, y, stand.z, 1.5, ['#ff3b1e', null, '#ffb347'], STYLE.LAVA)
       for (const side of [-1, 1]) {
         props.box(stand.x + side * 0.7, y + 1.95, stand.z, 0.35, 1.1, 0.35, '#1d1d24', STYLE.SMOOTH, [0, 0, side * -0.45])
         props.box(stand.x + side * 1.85, y + 0.5, stand.z - 0.3, 1.6, 0.9, 0.12, '#a8162a', STYLE.STUDS, [0, side * 0.3, side * 0.45])
@@ -57,10 +32,12 @@ export function buildEggStands(blocks, props) {
     }
     blocks.addOn(stand.x, 0, stand.z, 3.2, 0.55, 3.2, '#2f7fe6')
     blocks.addOn(stand.x, 0.55, stand.z, 2.8, 0.35, 2.8, '#f4f7fb')
-    blocks.addOn(stand.x, 0.9, stand.z + 1.2, 1, 0.08, 0.4, '#ffd21f', STYLE.GLOW)
-    egg(props, stand.x, eggHeight(stand), stand.z, 1.05, colors)
-    if (stand.eggId === 'unicorn') {
-      props.box(stand.x, eggHeight(stand) + 1.55, stand.z, 0.22, 0.75, 0.22, '#ffd23a', STYLE.GLOW, [0.25, 0, 0])
+    // A ring of light on the top, in the egg's colour, and gold studs at its corners.
+    const ring = RING[stand.eggId] || RING.basic
+    for (const side of [-1, 1]) {
+      blocks.addOn(stand.x, 0.9, stand.z + side * 1.05, 2.1, 0.06, 0.2, ring, STYLE.GLOW)
+      blocks.addOn(stand.x + side * 1.05, 0.9, stand.z, 0.2, 0.06, 1.9, ring, STYLE.GLOW)
+      for (const end of [-1, 1]) blocks.addOn(stand.x + side * 1.25, 0.9, stand.z + end * 1.25, 0.3, 0.16, 0.3, '#ffd21f', STYLE.GLOW)
     }
   }
 

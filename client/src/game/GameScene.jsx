@@ -16,6 +16,7 @@ import RemoteAvatars from './remote/RemoteAvatars'
 import RemotePlayers from './remote/RemotePlayers'
 import Particles from './fx/Particles'
 import Leaderboards from './world/Leaderboards'
+import EggDisplays from './world/EggDisplays'
 import PlaneShop from './world/PlaneShop'
 import Portal from './world/Portal'
 import TutorialArrows from './world/TutorialArrows'
@@ -175,6 +176,7 @@ export function GameScene({ onReady }) {
         <World />
         <WorldLabels />
         <PlaneShop />
+        <EggDisplays />
         <Portal />
         <Leaderboards />
         <TutorialArrows />
