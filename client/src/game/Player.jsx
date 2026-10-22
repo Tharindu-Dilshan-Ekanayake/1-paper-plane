@@ -10,6 +10,16 @@ import ErrorBoundary from '../ui/ErrorBoundary'
 import FallbackAvatar from './FallbackAvatar'
 import { createFrisbeeModel } from './frisbee'
 import PlayerAvatar from './PlayerAvatar'
+import {
+  CATCH_TIME,
+  FACE_FLAT,
+  FACE_UPRIGHT,
+  GRIP_FLAT,
+  GRIP_UPRIGHT,
+  heldFlatness,
+  RELEASE_AT,
+  THROW_TIME,
+} from './playerPose'
 import { runtime } from './runtime'
 import useKeyboard from './useKeyboard'
 
@@ -34,9 +44,10 @@ const _up = new Vector3(0, 1, 0)
 const _clamped = { x: 0, z: 0 }
 
 /**
- * The equipped frisbee, held at the right side with its design turned out towards the
- * camera, glowing in its own colour. Hidden for the moment it's been thrown, so the
- * flying copy reads as the same frisbee.
+ * The equipped frisbee in the right hand, glowing in its own colour. It lives inside
+ * the hand anchor the avatar moves onto the palm each frame; here it only picks its
+ * grip: upright at the side, turning flat through the wind-up and coming back flat
+ * from a catch. Hidden while it is away (thrown), so the flying copy reads as this one.
  */
 function HeldFrisbee() {
   const ref = useRef(null)
@@ -44,21 +55,21 @@ function HeldFrisbee() {
 
   useEffect(() => () => model.dispose(), [model])
 
-  useFrame((state) => {
+  useFrame(() => {
     const group = ref.current
     if (!group) return
+    const player = runtime.player
     group.setFrisbee(getGame().profile.equippedPlane)
     group.setGlowSize(1.5 * getQuality().frisbeeGlow)
-    // A gentle bob so it feels alive in the hand.
-    group.position.y = 1.12 + Math.sin(state.clock.elapsedTime * 2.4) * 0.03
-    // Released after the wind-up, back in hand once the swing finishes.
-    const t = runtime.player.throwTimer
-    group.visible = !(t > 0 && t < 0.24)
+    group.visible = !player.frisbeeAway
+    const flat = heldFlatness(player.throwTimer, player.catchTimer)
+    group.position.lerpVectors(GRIP_UPRIGHT, GRIP_FLAT, flat)
+    group.quaternion.slerpQuaternions(FACE_UPRIGHT, FACE_FLAT, flat)
+    // Where a throw starts from: the training shots and the stage flight read it.
+    group.getWorldPosition(player.frisbeeAt)
   })
 
-  // The character faces +Z locally, so its right hand is on -X. The disc stands nearly
-  // upright at the hip, its top face turned out to the right and back to the camera.
-  return <primitive ref={ref} object={model} position={[-0.72, 1.12, 0.02]} rotation={[-0.5, 0, 1.05]} scale={0.95} />
+  return <primitive ref={ref} object={model} scale={0.95} />
 }
 
 /** Pushes a circle out of an axis-aligned rect. Returns true on contact. */
@@ -106,12 +117,23 @@ function pushOut(pos, rect) {
 export function Player({ onAvatarReady }) {
   const groupRef = useRef(null)
   const visualRef = useRef(null)
+  /** Moved onto the right palm by whichever avatar is showing. */
+  const handRef = useRef(null)
   const keys = useKeyboard()
   const velocity = useRef(new Vector3())
   const vy = useRef(0)
 
   /** Handed to the avatar so it can pose itself. A ref: written every frame. */
-  const motionRef = useRef({ time: 0, speed: 0, grounded: true, maxSpeed: WALK_SPEED, throwT: 0 })
+  const motionRef = useRef({
+    time: 0,
+    speed: 0,
+    grounded: true,
+    maxSpeed: WALK_SPEED,
+    vy: 0,
+    stride: 0,
+    throwT: 0,
+    catchT: 0,
+  })
 
   useEffect(() => {
     const caster = { position: runtime.player.position, size: 1.1 }
@@ -217,8 +239,18 @@ export function Player({ onAvatarReady }) {
       group.position.set(pos.x, visualY, pos.z)
     }
 
-    // --- Publish motion ---------------------------------------------------------
+    // --- Throw and catch -------------------------------------------------------
+    // The frisbee is away from the release until the swing ends (a training shot), or
+    // for the whole flight off the stage; it comes back into the hand with a catch.
     player.throwTimer = Math.max(0, player.throwTimer - delta)
+    const wasAway = player.frisbeeAway
+    player.frisbeeAway =
+      player.throwTimer > 0 ? player.throwTimer <= THROW_TIME * (1 - RELEASE_AT) : runtime.camera.mode === 'flight'
+    player.catchTimer = wasAway && !player.frisbeeAway ? CATCH_TIME : Math.max(0, player.catchTimer - delta)
+    // A new throw starts with the frisbee already in hand.
+    if (player.throwTimer > 0) player.catchTimer = 0
+
+    // --- Publish motion ---------------------------------------------------------
     player.speed = speed
     player.anim = !player.grounded ? 'jump' : player.throwTimer > 0 ? 'throw' : speed > 0.5 ? 'walk' : 'idle'
 
@@ -226,17 +258,24 @@ export function Player({ onAvatarReady }) {
     motion.time += delta
     motion.speed = speed
     motion.grounded = player.grounded
-    motion.maxSpeed = maxSpeed
+    // Full stride amplitude at a sprint, so walking reads as a walk.
+    motion.maxSpeed = WALK_SPEED * SPRINT_MULTIPLIER
+    motion.vy = vy.current
+    // Steps quicken with speed: the stride phase runs faster rather than jumping.
+    motion.stride += delta * (5 + 6 * Math.min(1, speed / (WALK_SPEED * SPRINT_MULTIPLIER)))
     motion.throwT = player.throwTimer
+    motion.catchT = player.catchTimer
   })
 
   return (
     <group ref={groupRef}>
       <group ref={visualRef}>
-        <HeldFrisbee />
-        <ErrorBoundary fallback={<FallbackAvatar motionRef={motionRef} onReady={onAvatarReady} />}>
-          <Suspense fallback={<FallbackAvatar motionRef={motionRef} />}>
-            <PlayerAvatar onReady={onAvatarReady} targetHeight={PLAYER_HEIGHT} motionRef={motionRef} />
+        <group ref={handRef}>
+          <HeldFrisbee />
+        </group>
+        <ErrorBoundary fallback={<FallbackAvatar motionRef={motionRef} handRef={handRef} onReady={onAvatarReady} />}>
+          <Suspense fallback={<FallbackAvatar motionRef={motionRef} handRef={handRef} />}>
+            <PlayerAvatar onReady={onAvatarReady} targetHeight={PLAYER_HEIGHT} motionRef={motionRef} handRef={handRef} />
           </Suspense>
         </ErrorBoundary>
       </group>

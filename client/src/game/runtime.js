@@ -22,6 +22,12 @@ export const runtime = {
     anim: 'idle',
     /** Seconds left on the current throw swing, driving the arm pose. */
     throwTimer: 0,
+    /** True from a throw's release until the frisbee is back in the hand. */
+    frisbeeAway: false,
+    /** Seconds left on the catch when the frisbee comes back. */
+    catchTimer: 0,
+    /** World position of the frisbee in the hand: where throws leave from. */
+    frisbeeAt: new Vector3(SPAWN.x, 1, SPAWN.z),
     /** Set when the controller should ignore input (flight, cutscenes). */
     frozen: false,
   },

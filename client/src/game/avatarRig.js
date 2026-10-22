@@ -1,6 +1,7 @@
-import { NearestFilter, Quaternion, SRGBColorSpace, Vector3 } from 'three'
+import { Box3, Matrix4, NearestFilter, Quaternion, SRGBColorSpace, Vector3 } from 'three'
 
 import { BACK_BONE, HAT_BONE, NECK_OFFSET_BONE, PART_SLOTS } from '../bloxity/avatarAssets'
+import { computePose, POSED_BONES } from './playerPose'
 
 /**
  * Rig manipulation for the base `player.glb` character.
@@ -24,6 +25,9 @@ import { BACK_BONE, HAT_BONE, NECK_OFFSET_BONE, PART_SLOTS } from '../bloxity/av
  * player.glb ships no animation clips, so the character is posed, not animated.
  */
 
+/** The forearm bone; the frisbee rides at the hand on its end. */
+const HAND_BONE = 'ArmR2'
+
 /**
  * Walks the loaded rig and collects everything later operations need.
  *
@@ -45,6 +49,10 @@ export function collectRig(root) {
     skinnedMeshes: [],
     /** Rest Y of the character root, so the run-cycle bob can return to it. */
     rootRestY: root.position.y,
+    /** Right forearm, the palm on it (bone-local) and its rest orientation, inverted. */
+    handBone: null,
+    handPoint: null,
+    handRestInv: null,
   }
 
   const meshBySlot = new Map(
@@ -105,6 +113,20 @@ export function collectRig(root) {
       entry.axisX = new Vector3(1, 0, 0).applyQuaternion(relInv).normalize()
       /** Local axis to rotate about for lateral sway. */
       entry.axisZ = new Vector3(0, 0, 1).applyQuaternion(relInv).normalize()
+      /** Local axis to rotate about for a twist. */
+      entry.axisY = new Vector3(0, 1, 0).applyQuaternion(relInv).normalize()
+    }
+
+    // The palm: the bottom of the right arm mesh, a little up from its end, found in
+    // the bind pose and kept in the forearm bone's frame so it follows the arm.
+    const handBone = skeleton.bones.find((b) => b.name === HAND_BONE)
+    const arm = rig.partMeshes.arm_R
+    if (handBone && arm) {
+      const box = new Box3().setFromObject(arm)
+      const palm = new Vector3((box.min.x + box.max.x) / 2, box.min.y + (box.max.y - box.min.y) * 0.06, (box.min.z + box.max.z) / 2)
+      rig.handBone = handBone
+      rig.handPoint = handBone.worldToLocal(palm)
+      rig.handRestInv = rootQuatInv.clone().multiply(handBone.getWorldQuaternion(new Quaternion())).invert()
     }
 
     rig.hatBone = skeleton.bones.find((b) => b.name === HAT_BONE) || null
@@ -304,19 +326,15 @@ export function applyProportions(rig, proportions) {
 /* ---------------------------------------------------------------------------
  * Procedural animation
  *
- * player.glb ships zero animation clips, so a walk/run/jump cycle has to be
- * driven directly on the bones. Rotations are *multiplied onto* whatever
- * applyProportions() just wrote, so this must run immediately after it in the
- * same frame - proportions reset each bone to its rest pose, which is exactly
- * the clean base a pose needs.
+ * player.glb ships zero animation clips, so the body is posed directly on the bones
+ * from the shared pose (playerPose.js). Rotations are *multiplied onto* whatever
+ * applyProportions() just wrote, so this must run immediately after it in the same
+ * frame - proportions reset each bone to its rest pose, the clean base a pose needs.
  * ------------------------------------------------------------------------- */
 
 const _animQ = new Quaternion()
 
-/**
- * Rotates a bone about one of its precomputed character-space axes.
- * `which` is 'axisX' (forward/back swing) or 'axisZ' (lateral sway).
- */
+/** Rotates a bone about one of its precomputed character-space axes. */
 function rotateBone(rig, name, which, angle) {
   if (!angle) return
   const entry = rig.bones[name]
@@ -325,90 +343,44 @@ function rotateBone(rig, name, which, angle) {
   entry.bone.quaternion.multiply(_animQ.setFromAxisAngle(axis, angle))
 }
 
-/** Swing a limb forward/back - the plane a walk cycle actually moves in. */
-const swing = (rig, name, angle) => rotateBone(rig, name, 'axisX', angle)
-/** Sway a limb out to the side. */
-const sway = (rig, name, angle) => rotateBone(rig, name, 'axisZ', angle)
-
 /**
  * Poses the rig for the current motion state.
  *
  * @param {object} rig from `collectRig`
- * @param {{ time: number, speed: number, grounded: boolean, maxSpeed: number }} motion
- *   `speed` is horizontal speed in world units/sec; `maxSpeed` is what counts as a
- *   full-amplitude run, so the cycle scales smoothly from a walk to a sprint.
+ * @param {object} motion see `computePose`
+ * @param {number} unitsPerMetre rig units in one world metre, for the body's lift
  */
-export function animateRig(rig, motion) {
+export function animateRig(rig, motion, unitsPerMetre = 1) {
   if (!rig?.skeleton || !motion) return
-  basePose(rig, motion)
-  if (motion.throwT > 0) throwPose(rig, motion.throwT)
+  const pose = computePose(motion)
+  for (const name of POSED_BONES) {
+    const joint = pose.bones[name]
+    rotateBone(rig, name, 'axisX', joint.swing)
+    rotateBone(rig, name, 'axisZ', joint.sway)
+    rotateBone(rig, name, 'axisY', joint.twist)
+  }
+  rig.root.position.y = rig.rootRestY + pose.lift * unitsPerMetre
 }
 
-/** Seconds a throw swing lasts; matches THROW_ANIM in TrainingFX. */
-const THROW_DURATION = 0.35
+const _parentInv = new Matrix4()
+const _boneQ = new Quaternion()
+const _parentQ = new Quaternion()
+const _scratchP = new Vector3()
+const _scratchS = new Vector3()
 
 /**
- * Overhand throw layered on the right arm: wind up over the head, then snap forward.
- * `throwT` counts down from THROW_DURATION.
+ * Puts `hand` (an object in one of the avatar's ancestors) on the palm, turned by as
+ * much as the forearm has turned from its rest pose. Run after `animateRig`.
  */
-function throwPose(rig, throwT) {
-  const t = 1 - Math.min(1, throwT / THROW_DURATION)
-  const windUp = 0.3
-  const angle =
-    t < windUp ? -2.9 * (t / windUp) : -2.9 + ((t - windUp) / (1 - windUp)) * 1.9
-  swing(rig, 'ArmR1', angle)
-  swing(rig, 'ArmR2', t < windUp ? -0.5 : -0.1)
-  swing(rig, 'Spine1', t < windUp ? 0.08 : -0.12)
-}
-
-function basePose(rig, motion) {
-  const { time = 0, speed = 0, grounded = true, maxSpeed = 6 } = motion
-  const ratio = Math.min(speed / Math.max(maxSpeed, 0.001), 1)
-
-  rig.root.position.y = rig.rootRestY
-
-  // --- Airborne: tuck the legs, throw the arms up ---------------------------
-  if (!grounded) {
-    swing(rig, 'LegL1', -0.55)
-    swing(rig, 'LegL2', 0.75)
-    swing(rig, 'LegR1', 0.3)
-    swing(rig, 'LegR2', 0.2)
-    swing(rig, 'ArmL1', -2.1)
-    swing(rig, 'ArmR1', -2.1)
-    swing(rig, 'Spine1', -0.1)
-    return
-  }
-
-  // --- Standing still: a slow breathing sway --------------------------------
-  if (ratio < 0.04) {
-    const idle = Math.sin(time * 1.6)
-    sway(rig, 'ArmL1', -0.07 - idle * 0.03)
-    sway(rig, 'ArmR1', 0.07 + idle * 0.03)
-    swing(rig, 'Spine1', idle * 0.02)
-    rig.root.position.y = rig.rootRestY + idle * 0.03
-    return
-  }
-
-  // --- Walk / run cycle -----------------------------------------------------
-  // Step frequency rises with speed so a sprint doesn't look like a moonwalk.
-  const phase = time * (5 + ratio * 5)
-  const cycle = Math.sin(phase)
-  const legAmp = 0.85 * ratio
-  const armAmp = 0.7 * ratio
-
-  // Legs swing in opposition; knees fold on the backswing only.
-  swing(rig, 'LegL1', cycle * legAmp)
-  swing(rig, 'LegR1', -cycle * legAmp)
-  swing(rig, 'LegL2', Math.max(0, -cycle) * 1.1 * ratio)
-  swing(rig, 'LegR2', Math.max(0, cycle) * 1.1 * ratio)
-
-  // Arms counter-swing against the legs.
-  swing(rig, 'ArmL1', -cycle * armAmp)
-  swing(rig, 'ArmR1', cycle * armAmp)
-  swing(rig, 'ArmL2', Math.max(0, cycle) * 0.5 * ratio)
-  swing(rig, 'ArmR2', Math.max(0, -cycle) * 0.5 * ratio)
-
-  // Lean into the run, and bob once per step (twice per full cycle).
-  swing(rig, 'Spine1', -0.14 * ratio)
-  rig.root.position.y = rig.rootRestY + Math.abs(Math.cos(phase)) * 0.18 * ratio
+export function placeHand(rig, hand) {
+  const bone = rig.handBone
+  const parent = hand?.parent
+  if (!bone || !parent) return
+  // Refreshes the whole chain down to the forearm, the hand's parent included.
+  bone.updateWorldMatrix(true, false)
+  _parentInv.copy(parent.matrixWorld).invert()
+  hand.position.copy(rig.handPoint).applyMatrix4(bone.matrixWorld).applyMatrix4(_parentInv)
+  bone.matrixWorld.decompose(_scratchP, _boneQ, _scratchS)
+  parent.matrixWorld.decompose(_scratchP, _parentQ, _scratchS)
+  hand.quaternion.copy(_parentQ.invert()).multiply(_boneQ).multiply(rig.handRestInv)
 }

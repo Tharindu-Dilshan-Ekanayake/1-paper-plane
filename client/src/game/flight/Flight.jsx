@@ -32,6 +32,7 @@ import { spawnPopup } from '../fx/popups'
 import { createFrisbeeModel, frisbeeOrientation } from '../frisbee'
 import { LabelBatch } from '../labels/LabelBatch'
 import { sharedMaterials, STYLE } from '../materials'
+import { RELEASE_DELAY } from '../playerPose'
 import { runtime } from '../runtime'
 import { FOG, SKY } from '../sceneStyle'
 import { skyUniforms } from '../skyState'
@@ -350,13 +351,14 @@ export default function Flight() {
     if (flight.active) {
       if (startedFor.current !== flight.startedAt) {
         startedFor.current = flight.startedAt
-        const p = runtime.player.position
-        flightStart.current.set(p.x - Math.cos(runtime.player.yaw) * 0.45, p.y + 1.6, p.z)
+        flightStart.current.copy(runtime.player.frisbeeAt)
         trophyTally.current = { next: 0, pending: 0, shownAt: 0 }
         _prevPlane.copy(flightStart.current)
       }
-      // Hold for the wind-up before the plane leaves the hand.
-      const t = Math.min(1, Math.max(0, (now - flight.startedAt) / 1000 - 0.12) / flight.duration)
+      // Rides in the hand through the wind-up and leaves it at the release.
+      const elapsed = (now - flight.startedAt) / 1000
+      if (elapsed < RELEASE_DELAY) flightStart.current.copy(runtime.player.frisbeeAt)
+      const t = Math.min(1, Math.max(0, elapsed - RELEASE_DELAY) / flight.duration)
       planePosition(t, flightStart.current, _p)
       flight.meter = Math.max(0, Math.min(flight.distance, THROW_LINE_Z - _p.z))
       focus = flight.meter
@@ -365,7 +367,8 @@ export default function Flight() {
       const climb = Math.max(-0.4, Math.min(0.4, (_p.y - _prevPlane.y) * 6))
       _prevPlane.copy(_p)
       if (plane) {
-        plane.visible = true
+        // The one in the hand is shown until the release.
+        plane.visible = elapsed >= RELEASE_DELAY
         plane.position.copy(_p)
         frisbeeOrientation(plane.quaternion, now * 0.022, 0.12 + climb, Math.sin(now * 0.0025) * 0.22 * (1 - t))
         plane.setFrisbee(getGame().profile.equippedPlane)

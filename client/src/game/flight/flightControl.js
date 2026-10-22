@@ -1,7 +1,7 @@
 import { sfx } from '../../audio/sfx'
 import { getGame } from '../../store/game'
 import { burst } from '../fx/fxQueue'
-import { THROW_ANIM } from '../fx/TrainingFX'
+import { THROW_TIME } from '../playerPose'
 import { runtime } from '../runtime'
 
 /** How long the "+N Wins" result shows before the camera returns to the player. */
@@ -46,7 +46,7 @@ export function beginFlight(result) {
     wins: result.wins,
     meter: 0,
   })
-  runtime.player.throwTimer = THROW_ANIM
+  runtime.player.throwTimer = THROW_TIME
   runtime.player.yaw = Math.PI
   runtime.player.frozen = true
   runtime.camera.mode = 'flight'

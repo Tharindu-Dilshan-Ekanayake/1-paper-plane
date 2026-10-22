@@ -21,6 +21,7 @@ import {
   applySkin,
   attachAccessory,
   collectRig,
+  placeHand,
 } from './avatarRig'
 
 /**
@@ -46,14 +47,15 @@ function fallbackMotion(delta) {
  * whole thing re-assembles when `onAvatarChanged` / `onProportionsChanged` fire, so
  * changing cosmetics in the Bloxity portal updates the character live.
  *
- * @param {{ onReady?: () => void, targetHeight?: number }} props
+ * @param {{ onReady?: () => void, targetHeight?: number, motionRef?: object, handRef?: object }} props
  *   `targetHeight` is the world-space height to fit the avatar into, in the game's
- *   own units. Bloxity authors the rig ~6.4 units tall with the feet at y=0, which is
+ *   own units. `handRef` is an object beside the avatar that gets moved onto the right
+ *   palm every frame (the held frisbee rides in it). Bloxity authors the rig ~6.4 units tall with the feet at y=0, which is
  *   far bigger than a metric-scale physics capsule, so the model is measured and
  *   rescaled rather than trusted at native size.
  */
 export const PlayerAvatar = forwardRef(function PlayerAvatar(
-  { onReady, targetHeight = 1.8, motionRef, ...props },
+  { onReady, targetHeight = 1.8, motionRef, handRef, ...props },
   ref,
 ) {
   const { avatar: equipped, proportions, game } = useBloxity()
@@ -202,7 +204,8 @@ export const PlayerAvatar = forwardRef(function PlayerAvatar(
       // Order matters: proportions reset every bone to its rest pose, and the
       // animation then rotates on top of that clean base.
       applyProportions(rig, proportionsRef.current)
-      animateRig(rig, motionRef?.current ?? fallbackMotion(delta))
+      animateRig(rig, motionRef?.current ?? fallbackMotion(delta), 1 / fit.scale)
+      if (handRef?.current) placeHand(rig, handRef.current)
     } catch {
       // A malformed payload must not kill the render loop.
     }

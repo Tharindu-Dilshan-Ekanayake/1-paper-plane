@@ -10,18 +10,15 @@ import { getQuality } from '../../store/quality'
 import { iconUrl } from '../../ui/icons'
 import { createFrisbeeMesh, disposeFrisbeeMesh, frisbeeGlow, frisbeeOrientation } from '../frisbee'
 import { createGlowInstances, disposeGlow } from '../glow'
+import { RELEASE_DELAY, THROW_TIME } from '../playerPose'
 import { runtime } from '../runtime'
 import { targetPoint } from '../world/targets'
 import { drainTrainFx } from './fxQueue'
 import { spawnPopup, updatePopups } from './popups'
 
 const MAX_SHOTS = 8
-/** Wind-up before the plane leaves the hand. */
-const RELEASE_DELAY = 0.12
 const FLIGHT_TIME = 0.42
 const ARC_HEIGHT = 0.9
-/** How long the throw swing lasts; Player and the avatar read this. */
-export const THROW_ANIM = 0.35
 
 const _m = new Matrix4()
 const _q = new Quaternion()
@@ -44,6 +41,7 @@ export function TrainingFX() {
   const shots = useRef(
     Array.from({ length: MAX_SHOTS }, () => ({
       active: false,
+      released: false,
       t: 0,
       gain: 0,
       leveledUp: false,
@@ -72,21 +70,16 @@ export function TrainingFX() {
     const player = runtime.player
 
     drainTrainFx((event) => {
-      player.throwTimer = THROW_ANIM
+      player.throwTimer = THROW_TIME
       const shot = shots.current.find((s) => !s.active) || shots.current[0]
       shot.to.fromArray(targetPoint(event.lane))
       // Face the target while training, unless walking somewhere.
       if (player.speed < 0.5) player.yaw = Math.atan2(shot.to.x - player.position.x, shot.to.z - player.position.z)
       shot.active = true
+      shot.released = false
       shot.t = 0
       shot.gain = event.gain
       shot.leveledUp = event.leveledUp
-      const side = 0.45
-      shot.from.set(
-        player.position.x - Math.cos(player.yaw) * side,
-        player.position.y + 1.55,
-        player.position.z + Math.sin(player.yaw) * side,
-      )
     })
 
     const frisbeeId = getGame().profile.equippedPlane
@@ -99,6 +92,11 @@ export function TrainingFX() {
       shot.t += delta
       const flight = (shot.t - RELEASE_DELAY) / FLIGHT_TIME
       if (flight < 0) continue
+      // Leaves from wherever the hand has swung the frisbee to at the release.
+      if (!shot.released) {
+        shot.released = true
+        shot.from.copy(player.frisbeeAt)
+      }
       if (flight >= 1) {
         shot.active = false
         _popupAt.set(
