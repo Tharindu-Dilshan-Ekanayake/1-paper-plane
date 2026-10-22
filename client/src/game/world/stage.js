@@ -30,20 +30,26 @@ export function buildStage(blocks) {
     blocks.addOn(side * (width / 2 - 0.25), height, midZ, 0.35, 0.08, depth - 0.6, SKY, STYLE.GLOW)
   }
 
-  // The throw pad: orange border, yellow fill (the "THROW AREA" decal sits on top).
+  // The throw pad: an orange border with the yellow fill raised on it. Each layer is a
+  // clear step up from the last (no two tops within a few cm of each other: that
+  // flickers in the distance, worst on phones' coarser depth buffers).
   const padX = (THROW_AREA.minX + THROW_AREA.maxX) / 2
   const padZ = (THROW_AREA.minZ + THROW_AREA.maxZ) / 2
   const padW = THROW_AREA.maxX - THROW_AREA.minX
   const padD = THROW_AREA.maxZ - THROW_AREA.minZ
-  blocks.addOn(padX, height - 0.02, padZ, padW + 0.8, 0.05, padD + 0.8, '#ff9a1f')
-  blocks.addOn(padX, height - 0.01, padZ, padW, 0.05, padD, '#ffd54a')
+  blocks.addOn(padX, height, padZ, padW + 0.8, 0.06, padD + 0.8, '#ff9a1f')
+  blocks.addOn(padX, height + 0.06, padZ, padW, 0.06, padD, '#ffd54a')
 
-  // Steps up the south side, lowest (and deepest) first, matching the walkable steps.
+  // Steps up the south side, matching the walkable steps. Each block covers only its
+  // own tread (from the next step's front to its own), so neighbouring steps never
+  // overlap and their sides can't fight.
   for (let i = 0; i < STAGE_STEPS; i += 1) {
-    const stepDepth = (STAGE_STEPS - i) * STAGE_STEP_DEPTH
+    const front = (STAGE_STEPS - i) * STAGE_STEP_DEPTH
+    const back = (STAGE_STEPS - i - 1) * STAGE_STEP_DEPTH
     const stepHeight = (height * (i + 1)) / (STAGE_STEPS + 1)
-    blocks.addOn(0, -0.1, maxZ + stepDepth / 2, width - 4, stepHeight + 0.1, stepDepth, i % 2 ? '#dbe8f6' : WHITE)
-    blocks.addOn(0, stepHeight - 0.02, maxZ + stepDepth - 0.15, width - 4, 0.06, 0.3, SKY, STYLE.GLOW)
+    blocks.addOn(0, -0.1, maxZ + (front + back) / 2, width - 4, stepHeight + 0.1, front - back, i % 2 ? '#dbe8f6' : WHITE)
+    // Glowing nosing on top of the tread, set back from its front edge.
+    blocks.addOn(0, stepHeight, maxZ + front - 0.25, width - 4.4, 0.05, 0.3, SKY, STYLE.GLOW)
   }
 
   // Front railing: posts and a glowing rail. The plane flies over it.

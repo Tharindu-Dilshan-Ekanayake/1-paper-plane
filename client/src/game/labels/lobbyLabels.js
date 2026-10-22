@@ -164,7 +164,8 @@ const shopLabel = () => ({
 /** The sign on the stage's launch arch. */
 const stageLabel = () => ({
   id: 'stage',
-  position: [0, STAGE.height + 10.2, THROW_LINE_Z + 1],
+  // On the face of the arch's beam, in front of it rather than half inside it.
+  position: [0, STAGE.height + 9.6, THROW_LINE_Z + 2.6],
   spec: { lines: [{ text: 'THROW!', size: 80, gradient: ['#fff6b0', '#ffd21f', '#ff8a00'] }], pxPerUnit: 34 },
   fade: 160,
 })

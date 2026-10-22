@@ -114,7 +114,8 @@ export function buildHangar(blocks) {
     step.maxZ - step.minZ,
     '#e9f1fa',
   )
-  blocks.addOn(step.minX + 0.3, -0.1, (step.minZ + step.maxZ) / 2, 0.6, step.height + 0.12, step.maxZ - step.minZ, '#1f3c96')
+  // Navy front, proud of the tier on every side (flush faces would flicker).
+  blocks.addOn(step.minX + 0.25, -0.1, (step.minZ + step.maxZ) / 2, 0.6, step.height + 0.2, step.maxZ - step.minZ + 0.1, '#1f3c96')
   // Navy display band along the back wall.
   blocks.addOn(HANGAR.maxX - 0.2, step.height, midZ, 0.4, 2.2, radiusZ * 1.6, '#1f3c96')
 }

@@ -150,9 +150,10 @@ function school(b, side) {
 function court(b, side) {
   const x = side * 24
   const z = zAt(36)
-  b.addOn(x, 0, z, 16, 0.1, 24, '#2f7fe6')
-  b.addOn(x, 0.1, z, 14, 0.04, 22, '#3a8ff0')
-  b.addOn(x, 0.12, z, 14, 0.04, 0.25, '#ffffff', STYLE.SMOOTH)
+  // Each layer stands a clear step on the one below, so none of the tops fight.
+  b.addOn(x, 0, z, 16, 0.12, 24, '#2f7fe6')
+  b.addOn(x, 0.12, z, 14, 0.08, 22, '#3a8ff0')
+  b.addOn(x, 0.2, z, 14, 0.06, 0.25, '#ffffff', STYLE.SMOOTH)
   for (const dz of [-10.5, 10.5]) {
     b.addOn(x, 0, z + dz, 0.4, 4.2, 0.4, '#e8e8e8', STYLE.SMOOTH)
     b.addOn(x, 3.6, z + dz - Math.sign(dz) * 0.4, 2, 1.4, 0.2, '#ffffff', STYLE.SMOOTH)
@@ -174,7 +175,7 @@ function car(b, x, z, rand) {
   const color = taxi ? '#ffcf1f' : pick(rand, ['#ff4040', '#3a8ff0', '#ffffff', '#2fbf3a', '#9b4dff'])
   b.addOn(x, 0.35, z, 2.1, 0.95, 4.4, color, STYLE.SMOOTH)
   b.addOn(x, 1.3, z + 0.2, 1.9, 0.85, 2.3, color, STYLE.SMOOTH)
-  b.addOn(x, 1.32, z + 0.2, 1.95, 0.6, 2.1, '#8fd3ff', STYLE.SMOOTH)
+  b.addOn(x, 1.32, z + 0.2, 2.02, 0.6, 2.1, '#8fd3ff', STYLE.SMOOTH)
   for (const dx of [-0.95, 0.95]) for (const dz of [-1.4, 1.4]) b.addOn(x + dx, 0, z + dz, 0.4, 0.8, 0.8, '#1d1f24', STYLE.SMOOTH)
   if (taxi) b.addOn(x, 2.15, z + 0.2, 0.9, 0.35, 0.5, '#ffffff', STYLE.GLOW)
 }
@@ -301,11 +302,12 @@ const DECOR = {
     }
   },
   city(b, m0, m1, rand, density) {
-    // Lane markings: dashes either side, double yellow down the middle.
+    // Lane markings: dashes either side, double yellow down the middle. Painted a clear
+    // 5 cm proud of the road (its top is at 0.05) so they don't flicker into it.
     for (let m = m0; m < m1; m += 7) {
-      for (const x of [-5, 5]) b.addOn(x, 0.03, zAt(m), 0.35, 0.03, 3, '#ffffff', STYLE.SMOOTH)
+      for (const x of [-5, 5]) b.addOn(x, 0.05, zAt(m), 0.35, 0.05, 3, '#ffffff', STYLE.SMOOTH)
     }
-    for (const x of [-0.35, 0.35]) b.addOn(x, 0.03, zAt((m0 + m1) / 2), 0.25, 0.03, m1 - m0, '#ffd21f', STYLE.SMOOTH)
+    for (const x of [-0.35, 0.35]) b.addOn(x, 0.05, zAt((m0 + m1) / 2), 0.25, 0.05, m1 - m0, '#ffd21f', STYLE.SMOOTH)
     sideItems(m0, m1, 15, rand, Math.max(0.6, density), (m, side) => building(b, side * (22 + rand() * 4), zAt(m), rand))
     sideItems(m0, m1, 18, rand, density, (m, side) => car(b, side * 7.6, zAt(m), rand))
     sideItems(m0, m1, 14, rand, density, (m, side) => addTree(b, side * 11.6, 0, zAt(m), 0.55, rand))

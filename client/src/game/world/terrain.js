@@ -62,6 +62,9 @@ export function terrainHeight(x, z) {
  * @param {import('../blocks').BlockSet} blocks
  * @param {() => number} rand
  */
+/** Half the widest canopy tier of a scale-1 tree. */
+const TREE_HALF_WIDTH = 2.4
+
 export function addTree(blocks, x, base, z, scale = 1, rand = Math.random) {
   const s = scale
   const trunk = 3 * s
@@ -137,8 +140,10 @@ export function buildTerrain(blocks, { treeDensity = 1 } = {}) {
   }
   for (const run of open.values()) emit(run)
 
-  // Trees on the terraces, kept off the cliff edges so they don't overhang the plaza.
+  // Trees on the terraces, kept off the cliff edges so they don't overhang the plaza,
+  // and clear of each other: overlapping canopies of near-equal height flicker.
   const rand = mulberry32(5)
+  const placed = []
   let trees = 0
   for (let j = 1; j < rows - 1; j += 1) {
     for (let i = 1; i < cols - 1; i += 1) {
@@ -153,7 +158,11 @@ export function buildTerrain(blocks, { treeDensity = 1 } = {}) {
       if (!flat) continue
       const x = BOUNDS.minX + (i + 0.5) * CELL
       const z = BOUNDS.minZ + (j + 0.5) * CELL
-      addTree(blocks, x, h, z, 0.9 + rand() * 0.5, rand)
+      const scale = 0.9 + rand() * 0.5
+      const reach = TREE_HALF_WIDTH * scale
+      if (placed.some((t) => Math.max(Math.abs(t.x - x), Math.abs(t.z - z)) < t.reach + reach)) continue
+      placed.push({ x, z, reach })
+      addTree(blocks, x, h, z, scale, rand)
       trees += 1
     }
   }
