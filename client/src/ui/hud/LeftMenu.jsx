@@ -7,7 +7,7 @@ import StrokeText from '../StrokeText'
 import { AlertBadge } from './parts'
 import { u } from './style'
 
-function MenuTile({ icon, label, onClick, alert, top }) {
+function MenuTile({ icon, label, onClick, alert, top, pointer }) {
   return (
     <button
       type="button"
@@ -34,6 +34,7 @@ function MenuTile({ icon, label, onClick, alert, top }) {
         </span>
       )}
       {alert && <AlertBadge size={44} style={{ top: u(-12), right: u(-16) }} />}
+      {pointer && <Icon name="arrowDown" size={u(70)} className="pp-bounce absolute" style={{ top: u(-96) }} />}
     </button>
   )
 }
@@ -44,6 +45,8 @@ export function LeftMenu() {
   const rebirthPct = useGame((s) => Math.floor(rebirthProgress(s.profile) * 100))
   const petAlert = useGame((s) => s.profile.equippedPets.length < Math.min(MAX_EQUIPPED_PETS, s.profile.pets.length))
   const itemAlert = useGame((s) => Object.values(s.profile.items).some((n) => n > 0))
+  // Tutorial: point at Rebirth once the first one is available.
+  const pointAtRebirth = useGame((s) => s.profile.tutorialStep === 2 && rebirthProgress(s.profile) >= 1)
 
   return (
     <div
@@ -56,6 +59,7 @@ export function LeftMenu() {
         label="Rebirth"
         top={`${rebirthPct}%`}
         alert={rebirthPct >= 100}
+        pointer={pointAtRebirth}
         onClick={() => togglePanel('rebirth')}
       />
       <MenuTile icon="items" label="Items" alert={itemAlert} onClick={() => togglePanel('items')} />

@@ -278,7 +278,24 @@ const sound = svg(
   <path d="M62 34c8 8 8 24 0 32M72 24c14 14 14 38 0 52" fill="none" stroke="${OUT}" stroke-width="7" stroke-linecap="round"/>`,
 )
 
+const starGold = svg(
+  `<path d="M50 6l13 27 29 4-21 20 5 29-26-14-26 14 5-29L8 37l29-4z" fill="url(#sg-g)" stroke="${OUT}" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M38 30l7-13" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".75"/>`,
+  vgrad('sg-g', GOLD),
+)
+
+const fastForward = svg(
+  `<path d="M8 18l40 32-40 32z" fill="url(#ff-g)" stroke="${OUT}" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M50 18l40 32-40 32z" fill="url(#ff-g)" stroke="${OUT}" stroke-width="6" stroke-linejoin="round"/>`,
+  vgrad('ff-g', [
+    [0, '#ffffff'],
+    [1, '#9fdcff'],
+  ]),
+)
+
 export const ICON_SVGS = {
+  starGold,
+  fastForward,
   trophy,
   rebirth,
   muscle,

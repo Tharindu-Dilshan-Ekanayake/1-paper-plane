@@ -4,6 +4,7 @@ import GameController from './GameController'
 import GameScene from './game/GameScene'
 import HUD from './ui/hud/HUD'
 import LoadingScreen from './ui/LoadingScreen'
+import Panels from './ui/panels/Panels'
 import PopupLayer from './ui/PopupLayer'
 import TouchControls from './ui/TouchControls'
 
@@ -18,6 +19,7 @@ function App() {
       <PopupLayer />
       <TouchControls />
       <HUD />
+      <Panels />
       <LoadingScreen done={ready} />
     </div>
   )

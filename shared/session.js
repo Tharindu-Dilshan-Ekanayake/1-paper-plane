@@ -1,13 +1,14 @@
-import { LANES, TRAIN_INTERVAL } from './balance.js'
+import { LANES, PRODUCTS, TRAIN_INTERVAL } from './balance.js'
 import {
   advanceTutorial,
+  applyRebirth,
   applyTrain,
   awardBadge,
   createSession,
   friendBoost,
+  grantProduct,
   isLaneUnlocked,
   isMaxLevel,
-  applyRebirth,
 } from './logic.js'
 import { laneRect, inRect } from './world.js'
 
@@ -33,14 +34,19 @@ export class PlayerSession {
    * @param {object} profile normalized profile (see logic.normalizeProfile)
    * @param {{ now: number, emit: (type: string, payload?: object) => void,
    *           getPosition: () => {x: number, y: number, z: number},
-   *           getFriends?: () => number }} options
+   *           getFriends?: () => number, mockPurchases?: boolean,
+   *           onPurchase?: (productId: string) => boolean }} options
+   *   `mockPurchases` grants premium products on request with no payment (dev and
+   *   offline only). `onPurchase` lets the host veto or count a grant (stock limits).
    */
-  constructor(profile, { now, emit, getPosition, getFriends = () => 0 }) {
+  constructor(profile, { now, emit, getPosition, getFriends = () => 0, mockPurchases = false, onPurchase }) {
     this.profile = profile
     this.session = createSession(now)
     this.emit = emit
     this.getPosition = getPosition
     this.getFriends = getFriends
+    this.mockPurchases = mockPurchases
+    this.onPurchase = onPurchase
 
     /** Lane the client says it's in; verified against position every tick. */
     this.lane = -1
@@ -123,6 +129,35 @@ export class PlayerSession {
       const result = this.fail(applyRebirth(this.profile))
       if (result.ok) this.afterRebirth()
     },
+
+    purchase({ productId }, now) {
+      if (!this.mockPurchases) {
+        this.toast('Purchases are coming soon!')
+        return
+      }
+      this.grant(productId, now)
+    },
+  }
+
+  /**
+   * Grants a paid product. Called for mock purchases here, and by the server's payment
+   * webhook for real ones.
+   */
+  grant(productId, now) {
+    const product = PRODUCTS[productId]
+    if (!product) return { ok: false }
+    if (this.onPurchase && !this.onPurchase(productId)) {
+      this.toast(`${product.name} is sold out!`, 'error')
+      return { ok: false }
+    }
+    const result = this.fail(grantProduct(this.profile, productId))
+    if (!result.ok) return result
+    this.dirty = true
+    if (productId === 'skipRebirth') this.afterRebirth()
+    else this.toast(`Purchased ${product.name}!`, 'success')
+    this.afterGrant?.(result, now)
+    if (this.dirty) this.sendProfile()
+    return result
   }
 
   afterRebirth() {
@@ -130,6 +165,11 @@ export class PlayerSession {
     this.tutorial('rebirth')
     if (this.profile.rebirths === 1) this.badge('firstRebirth')
     this.toast(`Rebirth ${this.profile.rebirths}! Power x${this.profile.rebirths + 1}`, 'success')
+    LANES.forEach((lane) => {
+      if (!lane.product && lane.rebirths === this.profile.rebirths) {
+        this.toast(`New lane unlocked: ${lane.name} (x${lane.mult} Power)!`, 'success')
+      }
+    })
   }
 
   // --- Simulation ------------------------------------------------------------------
