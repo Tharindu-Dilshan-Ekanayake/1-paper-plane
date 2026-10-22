@@ -71,18 +71,22 @@ export function laneRect(index) {
 
 // --- Plane hangar -------------------------------------------------------------------
 
-/** Open on its west side, facing the plaza. */
-export const HANGAR = { minX: 26, maxX: 48, minZ: -26, maxZ: 8, height: 11 }
-/** Raised back tier holding planes 6-10. */
-export const HANGAR_STEP = { minX: 37, maxX: 47.5, minZ: -25.5, maxZ: 7.5, height: 1 }
-export const PAD_SIZE = 4
+/**
+ * The frisbee shop, open on its west side facing the plaza. Its south wall stays at
+ * z -26 so the walk to the World 2 portal is clear.
+ */
+export const HANGAR = { minX: 22, maxX: 48, minZ: -26, maxZ: 12, height: 13 }
+/** Raised back tier holding frisbees 6-10. */
+export const HANGAR_STEP = { minX: 35.5, maxX: 47.5, minZ: -25.5, maxZ: 11.5, height: 1 }
+export const PAD_SIZE = 4.4
 
+/** Two rows of five display stands, 7 m apart, centred along the hall. */
 export const PLANE_PADS = Array.from({ length: 10 }, (_, i) => {
   const back = i >= 5
   return {
     index: i,
-    x: back ? 42.5 : 31.5,
-    z: -19 + (i % 5) * 6.2,
+    x: back ? 42 : 29,
+    z: (HANGAR.minZ + HANGAR.maxZ) / 2 - 14 + (i % 5) * 7,
     y: back ? HANGAR_STEP.height : 0,
   }
 })

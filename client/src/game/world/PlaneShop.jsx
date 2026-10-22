@@ -3,12 +3,12 @@ import { useEffect, useMemo, useRef } from 'react'
 import { Color, Matrix4, Quaternion, Vector3 } from 'three'
 
 import { PLANES } from '@shared/balance'
-import { PAD_SIZE, PLANE_PADS } from '@shared/world'
+import { HANGAR, HANGAR_STEP, PAD_SIZE, PLANE_PADS } from '@shared/world'
 
 import { useGame } from '../../store/game'
 import { getQuality } from '../../store/quality'
 import { BlockSet, disposeBlocks } from '../blocks'
-import { createFrisbeeMesh, disposeFrisbeeMesh, frisbeeGlow, frisbeeOrientation } from '../frisbee'
+import { createFrisbeeMesh, disposeFrisbeeMesh, frisbeeColor, frisbeeGlow, frisbeeOrientation } from '../frisbee'
 import { createGlowInstances, disposeGlow } from '../glow'
 import { padLabelSpec, padState } from '../labels/lobbyLabels'
 import { updateWorldLabel } from '../labels/registry'
@@ -25,13 +25,54 @@ const PAD_COLORS = {
 const _m = new Matrix4()
 const _q = new Quaternion()
 const _p = new Vector3()
-const _s = new Vector3(2.2, 2.2, 2.2)
+const _s = new Vector3(2.8, 2.8, 2.8)
+
+/** Height of a stand's glowing cap above its pad; the frisbee floats over it. */
+const CAP_TOP = 1.42
+const HOVER = CAP_TOP + 1.6
+
+/**
+ * Display stands, all in one block set. The first PLANE_PADS.length blocks are the
+ * pads themselves (recoloured by state, so their instance index is the pad index);
+ * the trimmings follow.
+ */
+function buildStands() {
+  const set = new BlockSet()
+  const slab = PAD_SIZE - 0.4
+  for (const pad of PLANE_PADS) set.addOn(pad.x, pad.y - 0.1, pad.z, slab, 0.3, slab, '#ffffff', STYLE.STUDS)
+  for (const pad of PLANE_PADS) {
+    const id = PLANES[pad.index].id
+    const { x, y, z } = pad
+    // White frame, standing clear of the pad's top.
+    const e = slab / 2 + 0.1
+    for (const side of [-1, 1]) {
+      set.addOn(x, y - 0.1, z + side * e, slab + 0.5, 0.45, 0.3, '#ffffff', STYLE.SMOOTH)
+      set.addOn(x + side * e, y - 0.1, z, 0.3, 0.45, slab + 0.2, '#ffffff', STYLE.SMOOTH)
+    }
+    // A glowing square ring on the pad in the frisbee's own glow colour.
+    const glow = frisbeeGlow(id)
+    for (const side of [-1, 1]) {
+      set.addOn(x, y + 0.2, z + side * 1.25, 2.68, 0.06, 0.18, glow, STYLE.GLOW)
+      set.addOn(x + side * 1.25, y + 0.2, z, 0.18, 0.06, 2.32, glow, STYLE.GLOW)
+    }
+    // Pedestal with a cap in the frisbee's colour.
+    set.addOn(x, y + 0.2, z, 1.1, 1, 1.1, '#f4f7fb', STYLE.SMOOTH)
+    set.addOn(x, y + 1.2, z, 1.5, CAP_TOP - 1.2, 1.5, frisbeeColor(id), STYLE.GLOW)
+  }
+  // A red carpet down the aisle between the two rows, edged in gold.
+  const aisleX = (PLANE_PADS[0].x + PAD_SIZE / 2 + HANGAR_STEP.minX) / 2
+  const length = HANGAR.maxZ - HANGAR.minZ - 3
+  const midZ = (HANGAR.minZ + HANGAR.maxZ) / 2
+  set.addOn(aisleX, 0, midZ, 2.4, 0.06, length, '#d8263a', STYLE.SMOOTH)
+  for (const side of [-1, 1]) set.addOn(aisleX + side * 1.25, 0, midZ, 0.18, 0.1, length, '#ffd21f', STYLE.GLOW)
+  return set.build(sharedMaterials().blocks)
+}
 const _glow = new Vector3()
 
 /**
- * The frisbee shop: ten pads with a frisbee hovering over each. Pads recolour and their
- * labels rewrite as you buy and equip; the frisbees spin slowly. Three draw calls:
- * pads, frisbees, halos.
+ * The frisbee shop: ten display stands, each a pad framed in white with a glowing
+ * pedestal and its frisbee floating above it. Pads recolour and their labels rewrite as
+ * you buy and equip; the frisbees spin slowly. Three draw calls: stands, frisbees, halos.
  */
 export function PlaneShop() {
   const owned = useGame((s) => s.profile.ownedPlanes)
@@ -41,11 +82,7 @@ export function PlaneShop() {
   const glowRef = useRef(null)
 
   const assets = useMemo(() => {
-    const set = new BlockSet()
-    for (const pad of PLANE_PADS) {
-      set.addOn(pad.x, pad.y - 0.1, pad.z, PAD_SIZE - 0.4, 0.3, PAD_SIZE - 0.4, '#ffffff', STYLE.STUDS)
-    }
-    const pads = set.build(sharedMaterials().blocks)
+    const pads = buildStands()
 
     // All ten frisbees, each in its own design, in one draw call.
     const discs = createFrisbeeMesh(PLANES.length)
@@ -85,9 +122,9 @@ export function PlaneShop() {
     const glows = glowRef.current
     if (!discs || !glows) return
     const t = state.clock.elapsedTime
-    const glowSize = 3.6 * getQuality().frisbeeGlow
+    const glowSize = 4.4 * getQuality().frisbeeGlow
     for (const pad of PLANE_PADS) {
-      _p.set(pad.x, pad.y + 2.6 + Math.sin(t * 1.6 + pad.index) * 0.18, pad.z)
+      _p.set(pad.x, pad.y + HOVER + Math.sin(t * 1.6 + pad.index) * 0.18, pad.z)
       // Stood up on edge facing the shop entrance (west) so the design shows, slowly
       // spinning about its own axis and rocking a little.
       frisbeeOrientation(_q, t * 0.8 + pad.index * 0.7, Math.sin(t + pad.index) * 0.12, 1.15)

@@ -93,7 +93,7 @@ export function padLabels(profile) {
   return PLANE_PADS.map((pad) => ({
     id: `pad-${pad.index}`,
     // Back-row labels ride higher so they clear the front row seen from the entrance.
-    position: [pad.x, pad.y + (pad.y > 0 ? 6.4 : 4.6), pad.z],
+    position: [pad.x, pad.y + (pad.y > 0 ? 7.4 : 5.8), pad.z],
     spec: padLabelSpec(pad.index, padState(profile, pad.index)),
     reserve: padReserve(pad.index),
     fade: 70,

@@ -14,7 +14,7 @@ import {
   Vector3,
 } from 'three'
 
-import { createGlowInstances, disposeGlow } from './glow'
+import { createGlowInstances, disposeGlow, glowTime } from './glow'
 
 /**
  * Frisbees: the thing every player throws.
@@ -116,8 +116,12 @@ const fragmentHead = /* glsl */ `
   varying vec3 vFAccent;
   varying float vFDesign;
   varying float vFUp;
+  uniform float uFTime;
 
   const float TAU = 6.2831853;
+  // How much of this fragment is the upper face; set by the design block, read by the
+  // shine pass.
+  float fTop = 0.0;
 
   // Anti-aliased band between radii a and b.
   float fBand(float r, float a, float b, float w) {
@@ -185,14 +189,39 @@ const DESIGN_GLSL = /* glsl */ `
     // The upper face: above the disc's midline and facing up (the lathe's normals point
     // inwards, so go by magnitude).
     float top = step(0.0, vFLocal.y) * smoothstep(0.3, 0.7, abs(vFUp));
+    fTop = top;
     float mask = clamp(m, 0.0, 1.0) * top;
     vec3 col = mix(diffuseColor.rgb, vFAccent, mask);
-    // The rim and underside a touch darker; a soft sheen round the top edge.
-    col *= mix(0.78, 1.0, top);
-    col += vec3(0.1) * smoothstep(0.72, 0.96, r) * top;
+    // Moulded like the real thing: lighter in the middle, two flight rings pressed in
+    // near the edge, the underside darker and the curled rim in the accent colour.
+    col *= mix(1.08, 0.94, r) * mix(0.8, 1.0, top);
+    col *= 1.0 - 0.16 * (fBand(r, 0.85, 0.87, w) + fBand(r, 0.9, 0.92, w)) * top;
+    col = mix(col, vFAccent * 0.9 + diffuseColor.rgb * 0.1, smoothstep(0.95, 0.99, r) * 0.75);
+    // The top three are special: Royal, Crystal and Golden catch a sweeping shine, and
+    // Crystal shimmers through the rainbow.
+    float sweep = 1.0 - smoothstep(0.0, 0.07, abs(fract((vFLocal.x + vFLocal.z) * 0.9 - uFTime * 0.45) - 0.5));
+    if (d > 7.0) col += vec3(0.55) * sweep * top;
+    if (d > 8.0 && d < 9.0) col += 0.22 * (0.5 + 0.5 * cos(TAU * (r * 1.4 + ang / TAU + uFTime * 0.2 + vec3(0.0, 0.33, 0.67)))) * top;
     diffuseColor.rgb = col;
     // The design glows.
     totalEmissiveRadiance += vFAccent * mask * 0.35;
+  }
+`
+
+/**
+ * Glossy plastic, after lighting: a highlight from a fixed light up and to the side of
+ * the view, and a rim light round the silhouette. Normals are turned to face the viewer,
+ * since the disc is double sided and the lathe's point inwards.
+ */
+const SHINE_GLSL = /* glsl */ `
+  {
+    vec3 fV = normalize(vViewPosition);
+    vec3 fN = normalize(normal);
+    if (dot(fN, fV) < 0.0) fN = -fN;
+    vec3 fH = normalize(normalize(vec3(0.45, 0.85, 0.35)) + fV);
+    float fSpec = pow(max(dot(fN, fH), 0.0), 48.0);
+    float fRim = pow(1.0 - max(dot(fN, fV), 0.0), 3.0);
+    outgoingLight += vec3(0.6) * fSpec * (0.4 + 0.6 * fTop) + vec3(0.28) * fRim;
   }
 `
 
@@ -214,8 +243,11 @@ export function frisbeeMaterial() {
       shader.fragmentShader = shader.fragmentShader
         .replace('#include <common>', `#include <common>\n${fragmentHead}`)
         .replace('#include <color_fragment>', `#include <color_fragment>\n${DESIGN_GLSL}`)
+        .replace('#include <opaque_fragment>', `${SHINE_GLSL}\n#include <opaque_fragment>`)
+      // The lobby's clock, which already ticks every frame for the halos.
+      shader.uniforms.uFTime = glowTime
     }
-    sharedMaterial.customProgramCacheKey = () => 'frisbee-v1'
+    sharedMaterial.customProgramCacheKey = () => 'frisbee-v2'
   }
   return sharedMaterial
 }
