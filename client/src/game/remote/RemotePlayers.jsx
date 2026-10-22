@@ -1,12 +1,8 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import {
-  BoxGeometry,
   Color,
-  DoubleSide,
-  InstancedMesh,
   Matrix4,
-  MeshLambertMaterial,
   Quaternion,
   Vector3,
 } from 'three'
@@ -15,8 +11,10 @@ import { THROW_LINE_Z } from '@shared/world'
 
 import { remotePlayers } from '../../net/remotePlayers'
 import { getQuality } from '../../store/quality'
+import { createBoxInstances, disposeBlocks } from '../blocks'
 import { createFrisbeeMesh, disposeFrisbeeMesh, frisbeeGlow, frisbeeOrientation } from '../frisbee'
 import { createGlowInstances, disposeGlow } from '../glow'
+import { sharedMaterials, STYLE } from '../materials'
 import { runtime } from '../runtime'
 import { hideNameplatesFrom, NAMEPLATE_POOL_SIZE, placeNameplate } from './nameplates'
 
@@ -62,7 +60,6 @@ const _up = new Vector3(0, 1, 0)
 const _target = new Vector3()
 const _dir = new Vector3()
 const _prev = new Vector3()
-const _color = new Color()
 
 function lerpAngle(a, b, t) {
   let d = b - a
@@ -101,11 +98,8 @@ export function RemotePlayers() {
   const ghostGlowRef = useRef(null)
 
   const assets = useMemo(() => {
-    // Same material settings as the other instanced planes/pads: one shared program.
-    const body = new InstancedMesh(new BoxGeometry(1, 1, 1), new MeshLambertMaterial({ side: DoubleSide, flatShading: true }), MAX_REMOTES * PARTS)
-    body.setColorAt(0, _color.set('#ffffff'))
-    body.count = 0
-    body.frustumCulled = false
+    // Smooth toy boxes: the shared toy material, so no extra shader program.
+    const body = createBoxInstances(MAX_REMOTES * PARTS, sharedMaterials().toy, STYLE.SMOOTH)
     body.castShadow = true
     // Other players' throws: their own frisbees (same mesh and material as yours).
     const ghosts = createFrisbeeMesh(MAX_GHOSTS)
@@ -114,9 +108,7 @@ export function RemotePlayers() {
 
   useEffect(
     () => () => {
-      assets.body.geometry.dispose()
-      assets.body.material.dispose()
-      assets.body.dispose()
+      disposeBlocks(assets.body)
       disposeFrisbeeMesh(assets.ghosts)
       disposeGlow(assets.ghostGlows)
       hideNameplatesFrom(0)

@@ -24,6 +24,9 @@ export function registerPopupElements(elements) {
       el,
       texts: [...el.querySelectorAll('[data-popup-text]')],
       icon: el.querySelector('img'),
+      // What the DOM currently shows, so spawning only writes what changed: setting an
+      // img src (even to the same data URL) or a gradient restyles and re-decodes.
+      shown: { text: null, gradient: null, iconUrl: undefined },
       active: false,
       born: 0,
       life: LIFE_MS,
@@ -48,11 +51,21 @@ export function spawnPopup(text, position, style = {}) {
   slot.life = style.life || LIFE_MS
   slot.scale = style.scale || 1
   slot.pos.set(position.x, position.y, position.z)
-  for (const t of slot.texts) t.textContent = text
-  if (slot.texts[1]) slot.texts[1].style.backgroundImage = style.gradient || DEFAULT_GRADIENT
-  if (slot.icon) {
-    slot.icon.style.display = style.iconUrl ? '' : 'none'
-    if (style.iconUrl) slot.icon.src = style.iconUrl
+  const shown = slot.shown
+  if (shown.text !== text) {
+    shown.text = text
+    for (const t of slot.texts) t.textContent = text
+  }
+  const gradient = style.gradient || DEFAULT_GRADIENT
+  if (slot.texts[1] && shown.gradient !== gradient) {
+    shown.gradient = gradient
+    slot.texts[1].style.backgroundImage = gradient
+  }
+  const iconUrl = style.iconUrl || null
+  if (slot.icon && shown.iconUrl !== iconUrl) {
+    shown.iconUrl = iconUrl
+    slot.icon.style.display = iconUrl ? '' : 'none'
+    if (iconUrl) slot.icon.src = iconUrl
   }
   slot.el.style.display = 'flex'
 }

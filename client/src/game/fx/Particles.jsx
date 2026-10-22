@@ -1,8 +1,10 @@
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
-import { BoxGeometry, Color, DoubleSide, Euler, InstancedMesh, Matrix4, MeshBasicMaterial, Quaternion, Vector3 } from 'three'
+import { Color, Euler, Matrix4, Quaternion, Vector3 } from 'three'
 
 import { useQuality } from '../../store/quality'
+import { createBoxInstances, disposeBlocks } from '../blocks'
+import { sharedMaterials, STYLE } from '../materials'
 import { drainBursts } from './fxQueue'
 
 /** Fixed pool: bursts reuse the oldest pieces when it's full. */
@@ -13,6 +15,8 @@ const _m = new Matrix4()
 const _q = new Quaternion()
 const _e = new Euler()
 const _s = new Vector3()
+/** Size of one confetti piece. */
+const PIECE = new Vector3(0.22, 0.22, 0.06)
 
 /** Pool state. Module-level: there is one particle system, mutated every frame. */
 const pieces = Array.from({ length: POOL }, () => ({
@@ -40,13 +44,11 @@ export function Particles() {
   const next = useRef(0)
 
   const mesh = useMemo(() => {
-    const m = new InstancedMesh(new BoxGeometry(0.22, 0.22, 0.06), new MeshBasicMaterial({ side: DoubleSide }), POOL)
-    m.setColorAt(0, PALETTES.confetti[0])
-    m.frustumCulled = false
+    // Glowing toy boxes through the shared toy material: no extra shader program.
+    // Every piece starts parked at zero scale.
+    const m = createBoxInstances(POOL, sharedMaterials().toy, STYLE.GLOW)
     m.count = POOL
-    // Park everything out of sight until used.
-    _m.makeScale(0, 0, 0)
-    for (let i = 0; i < POOL; i += 1) m.setMatrixAt(i, _m)
+    m.visible = false
     return m
   }, [])
 
@@ -54,9 +56,7 @@ export function Particles() {
     () => () => {
       // A remounted system (context restore) starts with an empty pool.
       for (const p of pieces) p.life = 0
-      mesh.geometry.dispose()
-      mesh.material.dispose()
-      mesh.dispose()
+      disposeBlocks(mesh)
     },
     [mesh],
   )
@@ -101,9 +101,11 @@ export function Particles() {
       p.pos.addScaledVector(p.vel, delta)
       p.rot.addScaledVector(p.spin, delta)
       _q.setFromEuler(_e.set(p.rot.x, p.rot.y, p.rot.z))
-      _s.setScalar(Math.min(1, p.life * 2))
+      _s.copy(PIECE).multiplyScalar(Math.min(1, p.life * 2))
       instanced.setMatrixAt(i, _m.compose(p.pos, _q, _s))
     }
+    // Nothing to draw (or particles off): skip the draw call entirely.
+    instanced.visible = alive
     if (alive) instanced.instanceMatrix.needsUpdate = true
   })
 

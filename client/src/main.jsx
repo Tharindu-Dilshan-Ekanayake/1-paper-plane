@@ -9,6 +9,9 @@ import BloxityProvider from './bloxity/BloxityProvider.jsx'
 import { installDebugHooks } from './debug'
 import './index.css'
 
+// Start-up milestones (pp:*) show up in DevTools' Performance panel and are read by
+// the automated load test.
+performance.mark('pp:main')
 installDebugHooks()
 installAudioUnlock()
 // Every chunky button clicks.

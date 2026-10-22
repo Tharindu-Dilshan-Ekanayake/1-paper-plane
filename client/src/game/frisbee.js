@@ -14,7 +14,7 @@ import {
   Vector3,
 } from 'three'
 
-import { createGlow, disposeGlow } from './glow'
+import { createGlowInstances, disposeGlow } from './glow'
 
 /**
  * Frisbees: the thing every player throws.
@@ -293,7 +293,10 @@ export function createFrisbeeModel({ glowSize = 1.6, glowIntensity = 0.9 } = {})
   const disc = createFrisbeeMesh(1)
   disc.setMatrixAt(0, IDENTITY)
   disc.count = 1
-  const glow = createGlow('#9fe8ff', glowIntensity)
+  // An instanced halo of one, so it shares the shader program with every other halo.
+  const glow = createGlowInstances(1, glowIntensity)
+  glow.setMatrixAt(0, IDENTITY)
+  glow.count = 1
   glow.scale.setScalar(glowSize)
 
   const group = new Group()
@@ -304,7 +307,8 @@ export function createFrisbeeModel({ glowSize = 1.6, glowIntensity = 0.9 } = {})
     if (id === current) return
     current = id
     disc.setStyle(0, id)
-    glow.material.uniforms.uColor.value.copy(frisbeeGlow(id))
+    glow.setColorAt(0, frisbeeGlow(id))
+    glow.instanceColor.needsUpdate = true
   }
   /** Halo size multiplier, e.g. from the quality preset. */
   group.setGlowSize = (size) => glow.scale.setScalar(size)

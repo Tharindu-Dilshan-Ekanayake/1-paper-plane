@@ -1,12 +1,11 @@
-import { AdditiveBlending, Color, InstancedMesh, Mesh, PlaneGeometry, ShaderMaterial } from 'three'
+import { AdditiveBlending, Color, InstancedMesh, PlaneGeometry, ShaderMaterial } from 'three'
 
 /**
- * Soft glowing halos for paper planes: camera-facing quads with a radial falloff,
- * blended additively. Procedural (no texture), and either one mesh (a halo that rides
- * along as a child of a plane) or instanced (many planes, one draw call).
+ * Soft glowing halos for frisbees: camera-facing quads with a radial falloff, blended
+ * additively. Procedural (no texture) and always instanced - a single frisbee's halo is
+ * an instance of one - so every halo shares one shader program.
  *
- * Colour comes from the material for single halos and from instanceColor for instanced
- * ones; the size is the object's scale.
+ * Colour comes from instanceColor; size is the instance (and object) scale.
  */
 
 const vertexShader = /* glsl */ `
@@ -63,14 +62,6 @@ function glowMaterial(color, intensity) {
     depthWrite: false,
     blending: AdditiveBlending,
   })
-}
-
-/** A single halo, to add as a child of a plane. Set `.scale` for its size. */
-export function createGlow(color = '#9fe8ff', intensity = 0.9) {
-  const mesh = new Mesh(QUAD, glowMaterial(color, intensity))
-  mesh.renderOrder = 5
-  mesh.frustumCulled = false
-  return mesh
 }
 
 /** Many halos in one draw call; position/size via setMatrixAt, colour via setColorAt. */

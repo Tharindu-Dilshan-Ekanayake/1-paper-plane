@@ -21,6 +21,9 @@ import { STYLE } from './materials'
  */
 
 const UNIT_BOX = new BoxGeometry(1, 1, 1)
+/** White vertex colours for the unit box: the toy material reads vertex colours, and
+ *  a box's colour comes from its instance colour instead. */
+const UNIT_BOX_COLORS = new BufferAttribute(new Float32Array(UNIT_BOX.getAttribute('position').count * 3).fill(1), 3)
 
 const colorCache = new Map()
 /** Parses and caches '#rrggbb' colours; scene builders call this thousands of times. */
@@ -80,6 +83,7 @@ export class BlockSet {
     for (const name of ['position', 'normal', 'uv']) {
       geometry.setAttribute(name, UNIT_BOX.getAttribute(name))
     }
+    geometry.setAttribute('color', UNIT_BOX_COLORS)
 
     const styles = new Float32Array(Math.max(count, 1))
     geometry.setAttribute('aStyle', new InstancedBufferAttribute(styles, 1))
@@ -189,4 +193,42 @@ export class PropBuilder {
     merged.computeBoundingSphere()
     return merged
   }
+}
+
+const _identity = new Matrix4()
+const _white = new Color(1, 1, 1)
+
+/**
+ * A merged prop geometry (vertex colours, per-vertex aStyle) drawn as a single
+ * instance, so it shares the instanced toy shader program with everything else.
+ */
+export function asToyInstance(geometry, material) {
+  const mesh = new InstancedMesh(geometry, material, 1)
+  mesh.setMatrixAt(0, _identity)
+  mesh.setColorAt(0, _white)
+  mesh.computeBoundingSphere()
+  return mesh
+}
+
+/** Up to `max` copies of a merged prop geometry, in its own vertex colours. Starts empty. */
+export function createToyInstances(geometry, material, max) {
+  const mesh = new InstancedMesh(geometry, material, max)
+  for (let i = 0; i < max; i += 1) mesh.setColorAt(i, _white)
+  mesh.count = 0
+  mesh.frustumCulled = false
+  return mesh
+}
+
+/**
+ * `max` unit boxes in one style, placed with setMatrixAt and tinted with setColorAt.
+ * Starts empty, every box at zero scale.
+ */
+export function createBoxInstances(max, material, style = STYLE.SMOOTH) {
+  const set = new BlockSet()
+  for (let i = 0; i < max; i += 1) set.add(0, 0, 0, 0, 0, 0, '#ffffff', style)
+  const mesh = set.build(material)
+  mesh.count = 0
+  mesh.frustumCulled = false
+  mesh.matrixAutoUpdate = true
+  return mesh
 }

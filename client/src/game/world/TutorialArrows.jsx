@@ -1,13 +1,13 @@
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
-import { InstancedMesh, Matrix4, Quaternion, Vector3 } from 'three'
+import { Matrix4, Quaternion, Vector3 } from 'three'
 
 import { TUTORIAL } from '@shared/balance'
 import { EGG_STANDS, groundHeightAt, LANE_NEAR_X, laneCenterZ, PLANE_PADS, THROW_AREA } from '@shared/world'
 
 import { getGame } from '../../store/game'
-import { PropBuilder } from '../blocks'
-import { createToyMaterial, STYLE } from '../materials'
+import { createToyInstances, PropBuilder } from '../blocks'
+import { sharedMaterials, STYLE } from '../materials'
 import { runtime } from '../runtime'
 
 const MAX_CHEVRONS = 14
@@ -45,16 +45,13 @@ function chevronGeometry() {
 export function TutorialArrows() {
   const ref = useRef(null)
   const { mesh } = useMemo(() => {
-    const m = new InstancedMesh(chevronGeometry(), createToyMaterial({ instanced: true, vertexColors: true }), MAX_CHEVRONS)
-    m.count = 0
-    m.frustumCulled = false
+    const m = createToyInstances(chevronGeometry(), sharedMaterials().toy, MAX_CHEVRONS)
     return { mesh: m }
   }, [])
 
   useEffect(
     () => () => {
       mesh.geometry.dispose()
-      mesh.material.dispose()
       mesh.dispose()
     },
     [mesh],

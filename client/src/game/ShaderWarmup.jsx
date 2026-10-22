@@ -1,5 +1,5 @@
 import { useThree } from '@react-three/fiber'
-import { useEffect } from 'react'
+import { useLayoutEffect } from 'react'
 
 /** Layer nothing lives on: the main camera looks at it while shaders compile. */
 const BLANK_LAYER = 31
@@ -20,34 +20,34 @@ export function ShaderWarmup({ onDone }) {
   const scene = useThree((s) => s.scene)
   const camera = useThree((s) => s.camera)
 
-  useEffect(() => {
+  // A layout effect, not a passive one: it must hide the scene before R3F draws its
+  // first frame, or that frame compiles everything synchronously anyway. As the last
+  // child of the scene, every sibling's objects are already in the scene by now.
+  useLayoutEffect(() => {
     // Dev's StrictMode remount disposes materials mid-compile, which only produces
     // driver warnings; the warm-up is a production start-up optimisation anyway.
     if (import.meta.env.DEV) {
       onDone()
       return undefined
     }
+    performance.mark('pp:warmup-effect')
     let cancelled = false
     camera.layers.set(BLANK_LAYER)
     // Lights are matched against the camera's layers, so compile through a camera that
     // sees the real scene, or every program would be built for zero lights.
     const probe = camera.clone()
     probe.layers.set(0)
-    // One frame's grace so every child has mounted and added its objects.
-    const id = requestAnimationFrame(() => {
-      performance.mark('pp:compile-start')
-      gl.compileAsync(scene, probe)
-        .catch((err) => console.warn('[warmup] shader precompile failed', err))
-        .finally(() => {
-          if (cancelled) return
-          performance.mark('pp:compile-end')
-          camera.layers.set(0)
-          onDone()
-        })
-    })
+    performance.mark('pp:compile-start')
+    gl.compileAsync(scene, probe)
+      .catch((err) => console.warn('[warmup] shader precompile failed', err))
+      .finally(() => {
+        if (cancelled) return
+        performance.mark('pp:compile-end')
+        camera.layers.set(0)
+        onDone()
+      })
     return () => {
       cancelled = true
-      cancelAnimationFrame(id)
       camera.layers.set(0)
     }
   }, [gl, scene, camera, onDone])

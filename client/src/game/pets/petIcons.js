@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
-import { Color, DirectionalLight, HemisphereLight, Mesh, PerspectiveCamera, Scene, WebGLRenderTarget } from 'three'
+import { Color, DirectionalLight, HemisphereLight, PerspectiveCamera, Scene, WebGLRenderTarget } from 'three'
 
+import { asToyInstance } from '../blocks'
 import { sharedMaterials } from '../materials'
 import { petGeometry } from './petModels'
 
@@ -40,7 +41,7 @@ function buildRig() {
   camera.position.set(1.55, 1.45, 3.3)
   camera.lookAt(0, 0.66, 0)
   const target = new WebGLRenderTarget(SIZE, SIZE, { samples: 4 })
-  const mesh = new Mesh(undefined, sharedMaterials().props)
+  const mesh = asToyInstance(petGeometry('cat'), sharedMaterials().toy)
   scene.add(mesh)
   return { scene, camera, target, mesh, pixels: new Uint8Array(SIZE * SIZE * 4) }
 }

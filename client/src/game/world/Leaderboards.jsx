@@ -80,6 +80,7 @@ function drawBoards(ctx, w, h, leaderboards, profile) {
 export function Leaderboards() {
   const leaderboards = useGame((s) => s.leaderboards)
   const profile = useGame((s) => s.profile)
+  const playable = useGame((s) => s.playable)
 
   const assets = useMemo(() => {
     const { maxTexture } = useQuality.getState().settings
@@ -133,6 +134,8 @@ export function Leaderboards() {
   )
 
   useEffect(() => {
+    // Not needed to start playing: drawn once the game is on screen.
+    if (!playable) return undefined
     let cancelled = false
     document.fonts?.load(`32px ${FONT}`).finally(() => {
       if (cancelled) return
@@ -145,7 +148,7 @@ export function Leaderboards() {
     // Profile changes constantly while training; offline boards only need the name
     // and headline stats, which a rebirth or a new best will bring along.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assets, leaderboards, profile.rebirths, profile.name])
+  }, [assets, playable, leaderboards, profile.rebirths, profile.name])
 
   return (
     <>

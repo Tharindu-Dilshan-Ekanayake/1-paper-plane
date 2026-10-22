@@ -27,11 +27,11 @@ import { sfx } from '../../audio/sfx'
 import { getGame } from '../../store/game'
 import { getQuality, useQuality } from '../../store/quality'
 import { iconUrl } from '../../ui/icons'
-import { BlockSet, disposeBlocks, PropBuilder } from '../blocks'
+import { BlockSet, createToyInstances, disposeBlocks, PropBuilder } from '../blocks'
 import { spawnPopup } from '../fx/popups'
 import { createFrisbeeModel, frisbeeOrientation } from '../frisbee'
 import { LabelBatch } from '../labels/LabelBatch'
-import { createToyMaterial, sharedMaterials, STYLE } from '../materials'
+import { sharedMaterials, STYLE } from '../materials'
 import { runtime } from '../runtime'
 import { FOG, SKY } from '../sceneStyle'
 import { skyUniforms } from '../skyState'
@@ -89,6 +89,10 @@ const _prevPlane = new Vector3()
 const planeFocus = new Vector3()
 const _skyTop = new Color()
 const _skyHorizon = new Color()
+
+/** At most one trophy popup this often; the trophies in between are summed into it. */
+const TROPHY_POPUP_MS = 180
+const TROPHY_ICON = iconUrl('trophy')
 
 /** Built chunks by index. Module-level: one track exists at a time. */
 const chunkCache = new Map()
@@ -188,17 +192,15 @@ export default function Flight() {
   const starsRef = useRef(null)
   const flightStart = useRef(new Vector3())
   const startedFor = useRef(0)
-  const collected = useRef(new Set())
+  /** Trophies popped so far this flight: index of the next, Wins not yet shown. */
+  const trophyTally = useRef({ next: 0, pending: 0, shownAt: 0 })
   const wasActive = useRef(false)
   const gatesRef = useRef(null)
   const speedLines = useQuality((s) => s.settings.speedLines)
   const particles = useQuality((s) => s.settings.particles)
 
   const assets = useMemo(() => {
-    const trophyMaterial = createToyMaterial({ instanced: true, vertexColors: true })
-    const trophies = new InstancedMesh(createTrophyGeometry(), trophyMaterial, MAX_TROPHIES)
-    trophies.count = 0
-    trophies.frustumCulled = false
+    const trophies = createToyInstances(createTrophyGeometry(), sharedMaterials().toy, MAX_TROPHIES)
 
     const planeModel = createFrisbeeModel({ glowSize: 1.9 })
     planeModel.scale.setScalar(2)
@@ -236,7 +238,7 @@ export default function Flight() {
     warpFloor.visible = false
     warpFloor.matrixAutoUpdate = false
 
-    return { trophies, trophyMaterial, planeModel, streakMesh, streakMaterial, stars, warpFloor }
+    return { trophies, planeModel, streakMesh, streakMaterial, stars, warpFloor }
   }, [])
 
   // This module loads after the lobby is on screen; compile its shaders in the
@@ -321,7 +323,6 @@ export default function Flight() {
       for (const mesh of chunkCache.values()) disposeBlocks(mesh)
       chunkCache.clear()
       assets.trophies.geometry.dispose()
-      assets.trophyMaterial.dispose()
       assets.trophies.dispose()
       assets.planeModel.dispose()
       assets.streakMesh.geometry.dispose()
@@ -351,7 +352,7 @@ export default function Flight() {
         startedFor.current = flight.startedAt
         const p = runtime.player.position
         flightStart.current.set(p.x - Math.cos(runtime.player.yaw) * 0.45, p.y + 1.6, p.z)
-        collected.current.clear()
+        trophyTally.current = { next: 0, pending: 0, shownAt: 0 }
         _prevPlane.copy(flightStart.current)
       }
       // Hold for the wind-up before the plane leaves the hand.
@@ -426,15 +427,22 @@ export default function Flight() {
 
     // --- Trophies -----------------------------------------------------------------
     if (flight.active) {
-      // Pop the ones just flown through. The Wins were granted with the throw; this
-      // is the visual receipt.
-      const multiplier = winsMultiplier(getGame().profile, Date.now())
-      for (const m of flight.trophies) {
-        if (m > flight.meter) break
-        if (collected.current.has(m)) continue
-        collected.current.add(m)
-        spawnPopup(`+${formatNumber(Math.round(trophyValue(m) * multiplier))}`, { x: _prevPlane.x, y: _prevPlane.y + 1, z: _prevPlane.z - 2 }, { iconUrl: iconUrl('trophy'), scale: 1.2 })
+      // Tally the ones just flown through. The Wins were granted with the throw; this
+      // is the visual receipt. At speed the plane passes dozens a second, so they're
+      // summed into one popup at most every TROPHY_POPUP_MS.
+      const tally = trophyTally.current
+      if (tally.next < 0) tally.next = 0
+      const trophies = flight.trophies
+      while (tally.next < trophies.length && trophies[tally.next] <= flight.meter) {
+        tally.pending += trophyValue(trophies[tally.next])
+        tally.next += 1
+      }
+      if (tally.pending > 0 && now - tally.shownAt >= TROPHY_POPUP_MS) {
+        const multiplier = winsMultiplier(getGame().profile, Date.now())
+        spawnPopup(`+${formatNumber(Math.round(tally.pending * multiplier))}`, { x: _prevPlane.x, y: _prevPlane.y + 1, z: _prevPlane.z - 2 }, { iconUrl: TROPHY_ICON, scale: 1.2 })
         sfx.trophy()
+        tally.pending = 0
+        tally.shownAt = now
       }
     }
     const trophies = trophyRef.current

@@ -25,6 +25,8 @@ import { iconUrl } from '../../ui/icons'
  */
 
 const FONT = '"Fredoka One", "Arial Rounded MT Bold", sans-serif'
+const LABELS_PER_SLICE = 4
+const yieldToFrame = () => new Promise((resolve) => setTimeout(resolve, 0))
 const PAD = 10
 const LINE_GAP = 0.04
 
@@ -224,8 +226,17 @@ export class LabelBatch {
       rowH = Math.max(rowH, m.h)
     }
 
+    // A few labels per slice, yielding in between, so drawing the atlas never turns
+    // into one long frame.
+    let drawn = 0
     for (const p of this.pages) {
-      for (const l of p.labels) this.drawLabel(l, l.spec)
+      for (const l of p.labels) {
+        this.drawLabel(l, l.spec)
+        drawn += 1
+        if (drawn % LABELS_PER_SLICE === 0) await yieldToFrame()
+      }
+    }
+    for (const p of this.pages) {
       p.texture = new CanvasTexture(p.canvas)
       p.texture.colorSpace = SRGBColorSpace
       p.texture.minFilter = LinearMipmapLinearFilter

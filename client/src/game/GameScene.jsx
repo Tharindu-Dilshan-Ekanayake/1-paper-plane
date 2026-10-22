@@ -1,6 +1,7 @@
 import { PerformanceMonitor } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { WebGLRenderer } from 'three'
 
 import { useBloxity } from '../bloxity/BloxityContext'
 import { useQuality } from '../store/quality'
@@ -44,6 +45,7 @@ function FirstFrameSignal({ onFirstFrame }) {
   useFrame(() => {
     if (fired.current) return
     fired.current = true
+    performance.mark('pp:first-frame')
     // Deferred: never update React state from inside the frame loop.
     setTimeout(onFirstFrame, 0)
   })
@@ -93,6 +95,7 @@ export function GameScene({ onReady }) {
   useEffect(() => {
     if (!warmedUp || !firstFrame || readySent.current) return
     readySent.current = true
+    performance.mark('pp:ready')
     game.loadingEnd()
     onReady?.()
   }, [warmedUp, firstFrame, game, onReady])
@@ -101,6 +104,7 @@ export function GameScene({ onReady }) {
   // remounting the canvas, which builds a fresh context and re-uploads everything.
   // Game state lives in stores, so nothing is lost but a moment of rendering.
   const handleCreated = useCallback(({ gl }) => {
+    performance.mark('pp:gl-created')
     gl.setClearColor(SKY.horizon)
     // Checking every program's compile status forces the driver to finish it on the
     // spot. Worth it while developing; in production it only costs start-up time.
@@ -126,12 +130,32 @@ export function GameScene({ onReady }) {
 
   const dpr = Math.min(settings.dpr, window.devicePixelRatio || 1)
 
+  // The renderer is built here rather than by R3F so its creation (the WebGL context,
+  // often the slowest single step of start-up) is measured, and so the canvas is opaque:
+  // the sky covers it anyway, and an opaque canvas is cheaper for the browser to
+  // composite.
+  const createRenderer = useMemo(
+    () => (defaults) => {
+      performance.mark('pp:gl-start')
+      const renderer = new WebGLRenderer({
+        ...defaults,
+        alpha: false,
+        antialias,
+        stencil: false,
+        powerPreference: 'high-performance',
+      })
+      performance.mark('pp:gl-end')
+      return renderer
+    },
+    [antialias],
+  )
+
   return (
     <>
       <Canvas
         key={contextKey}
         dpr={dpr}
-        gl={{ antialias, powerPreference: 'high-performance', stencil: false }}
+        gl={createRenderer}
         // PCF, not R3F's default "soft": three r18x removed PCFSoftShadowMap.
         shadows={settings.shadows === 'realtime' ? 'percentage' : false}
         // No tone mapping. The default (ACES) desaturates the toy colours; the palette

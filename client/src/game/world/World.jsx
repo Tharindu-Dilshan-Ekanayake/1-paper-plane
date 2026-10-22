@@ -2,7 +2,7 @@ import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useState } from 'react'
 
 import { useQuality } from '../../store/quality'
-import { BlockSet, disposeBlocks, PropBuilder } from '../blocks'
+import { asToyInstance, BlockSet, disposeBlocks, PropBuilder } from '../blocks'
 import { glowTime } from '../glow'
 import { createToyMaterial, sharedMaterials, toyTime } from '../materials'
 import { createGroundGeometry, createGroundMap } from './ground'
@@ -77,7 +77,7 @@ export function World() {
     performance.mark('pp:world-end')
     return {
       blocks: set.build(sharedMaterials().blocks),
-      props: propBuilder.build(),
+      props: asToyInstance(propBuilder.build(), sharedMaterials().toy),
       ground: { geometry: createGroundGeometry(), material: groundMaterial, map },
     }
   }, [])
@@ -85,7 +85,8 @@ export function World() {
   useEffect(
     () => () => {
       disposeBlocks(blocks)
-      props?.dispose()
+      props.geometry.dispose()
+      props.dispose()
       ground.geometry.dispose()
       ground.material.dispose()
       ground.map.dispose()
@@ -97,7 +98,7 @@ export function World() {
     <>
       <mesh geometry={ground.geometry} material={ground.material} receiveShadow={shadows} />
       <primitive object={blocks} castShadow={shadows} receiveShadow={shadows} />
-      {props && <mesh geometry={props} material={sharedMaterials().props} castShadow={shadows} receiveShadow={shadows} />}
+      <primitive object={props} castShadow={shadows} receiveShadow={shadows} />
       {decal && <mesh geometry={decal.geometry} material={decal.material} position={decal.position} renderOrder={1} />}
     </>
   )

@@ -20,6 +20,8 @@ export const useGame = create((set, get) => ({
   session: createSession(Date.now()),
   /** True once the first real profile has arrived. */
   profileLoaded: false,
+  /** True once the game is on screen; non-essential start-up work waits for it. */
+  playable: false,
 
   net: {
     /** 'connecting' | 'online' | 'offline' */
@@ -65,6 +67,7 @@ export const useGame = create((set, get) => ({
   patchProfile: (patch) => set((s) => ({ profile: { ...s.profile, ...patch } })),
   setNet: (patch) => set((s) => ({ net: { ...s.net, ...patch } })),
   setZone: (zone) => set({ zone }),
+  setPlayable: () => set({ playable: true }),
   setFriends: (friends) => set({ friends }),
   setSphinxStock: (sphinxStock) => set({ sphinxStock }),
   setLeaderboards: (leaderboards) => set({ leaderboards }),

@@ -1,4 +1,4 @@
-import { Color, MeshBasicMaterial, MeshLambertMaterial } from 'three'
+import { Color, MeshLambertMaterial } from 'three'
 
 /**
  * The toy-brick look, done in the shader instead of with textures.
@@ -225,20 +225,20 @@ export function createToyMaterial({
 }
 
 /**
- * Module-level shared materials. Created lazily (they must not be built before the
- * renderer exists in some test setups) and reused by every system.
+ * The one shared toy material: instanced, with vertex colours and instance colours.
+ * Everything toy-styled - blocks, props, pets, arrows, trophies, other players,
+ * confetti - is drawn as instances through it, so it compiles to a single shader
+ * program however many systems use it. (Only the ground, which needs a texture map,
+ * has its own variant.)
+ *
+ * Created lazily; `blocks` and `props` are the same material under the names the
+ * systems know it by.
  */
 let shared = null
 export function sharedMaterials() {
   if (!shared) {
-    shared = {
-      /** Instanced blocks: hills, buildings, lane floors, trees. */
-      blocks: createToyMaterial({ instanced: true, studScale: 2 }),
-      /** Merged vertex-coloured props: targets, eggs, signs. */
-      props: createToyMaterial({ instanced: false, studScale: 2 }),
-      /** Unlit, for things that must stay bright regardless of lighting. */
-      unlit: new MeshBasicMaterial({ vertexColors: true }),
-    }
+    const toy = createToyMaterial({ instanced: true, vertexColors: true, studScale: 2 })
+    shared = { toy, blocks: toy, props: toy }
   }
   return shared
 }

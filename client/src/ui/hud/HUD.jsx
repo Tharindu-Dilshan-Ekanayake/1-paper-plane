@@ -29,11 +29,17 @@ export function HUD() {
       <div className="absolute inset-0 transition-opacity duration-150" style={{ opacity: panelOpen ? 0 : 1, visibility: panelOpen ? 'hidden' : 'visible' }}>
         <TopBar />
         <TopCenter />
-        {!watching && <LeftMenu />}
-        {!watching && <RightButtons />}
+        {/* Hidden, not unmounted, while a frisbee flies: remounting them at the moment
+            of the throw cost a visible hitch on slow phones. */}
+        <div className="contents" style={{ visibility: watching ? 'hidden' : 'visible' }}>
+          <LeftMenu />
+          <RightButtons />
+        </div>
         <StatsPanel />
         <PowerBar />
-        {!watching && <AutoRebirthToggle />}
+        <div className="contents" style={{ visibility: watching ? 'hidden' : 'visible' }}>
+          <AutoRebirthToggle />
+        </div>
         <ThrowButton />
         <InteractPrompt />
         <EggPanel />
