@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 
 import GameController from './GameController'
 import GameScene from './game/GameScene'
+import HatchOverlay from './ui/HatchOverlay'
 import HUD from './ui/hud/HUD'
 import LoadingScreen from './ui/LoadingScreen'
 import Panels from './ui/panels/Panels'
@@ -20,6 +21,7 @@ function App() {
       <TouchControls />
       <HUD />
       <Panels />
+      <HatchOverlay />
       <LoadingScreen done={ready} />
     </div>
   )

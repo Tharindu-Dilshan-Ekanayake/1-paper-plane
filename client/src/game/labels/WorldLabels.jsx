@@ -16,7 +16,8 @@ export function WorldLabels() {
 
   useEffect(() => {
     const next = new LabelBatch({ pageSize: useQuality.getState().settings.maxTexture })
-    for (const label of lobbyLabels(getGame().profile)) next.add(label.id, label.position, label.spec, label)
+    const { profile, sphinxStock } = getGame()
+    for (const label of lobbyLabels(profile, { sphinxStock })) next.add(label.id, label.position, label.spec, label)
     let cancelled = false
     next.build().then(() => {
       if (cancelled) return

@@ -1,7 +1,8 @@
-import { LANES, PLANES, PRODUCTS } from '@shared/balance'
+import { EGGS, LANES, PETS, PLANES, PRODUCTS } from '@shared/balance'
 import { formatNumber } from '@shared/format'
-import { LANE_TARGET_Z, laneCenterX, PLANE_PADS } from '@shared/world'
+import { EGG_STANDS, LANE_TARGET_Z, laneCenterX, PLANE_PADS, SPHINX_STAND } from '@shared/world'
 
+import { eggHeight } from '../world/eggs'
 import { LANE_THEMES } from '../world/structures'
 
 /**
@@ -88,7 +89,53 @@ export function padLabels(profile) {
   }))
 }
 
+export function eggLabels() {
+  return EGG_STANDS.map((stand) => {
+    const egg = EGGS[stand.eggId]
+    const lines = stand.big
+      ? [
+          { text: 'Demon Egg', size: 54, gradient: TEXT.red },
+          { text: String(PRODUCTS.demonEgg.price), size: 46, icon: 'bux', gradient: TEXT.price },
+        ]
+      : [
+          { text: egg.name, size: 50, fill: '#ffffff' },
+          { text: `${formatNumber(egg.cost.wins)} Wins`, size: 44, icon: 'trophy', gradient: TEXT.gold },
+        ]
+    return {
+      id: `egg-${stand.eggId}`,
+      position: [stand.x, eggHeight(stand) + (stand.big ? 4 : 2.5), stand.z],
+      spec: { lines, pxPerUnit: 62 },
+      fade: 100,
+    }
+  })
+}
+
+/** The limited Sphinx showcase: price, hype, and live stock. */
+export function sphinxLabelSpec(stock) {
+  const mult = PETS.sphinx.mult
+  return {
+    lines: [
+      { text: String(PRODUCTS.sphinx.price), size: 46, icon: 'bux', gradient: TEXT.price },
+      { text: 'BEST IN GAME', size: 56, gradient: TEXT.red },
+      { text: 'Sphinx', size: 76, fill: '#ffffff' },
+      { text: `${formatNumber(mult * 100 - 100)}% BETTER`, size: 54, rainbow: true },
+      { text: `${formatNumber(stock)} Left`, size: 50, gradient: TEXT.green },
+    ],
+    pxPerUnit: 48,
+  }
+}
+
+export function sphinxLabel(stock) {
+  return {
+    id: 'sphinx',
+    position: [SPHINX_STAND.x, 11.5, SPHINX_STAND.z],
+    spec: sphinxLabelSpec(stock),
+    reserve: sphinxLabelSpec(88888),
+    fade: 140,
+  }
+}
+
 /** Every label in the lobby. Areas add theirs as their phases land. */
-export function lobbyLabels(profile) {
-  return [...laneLabels(), ...padLabels(profile)]
+export function lobbyLabels(profile, { sphinxStock = 0 } = {}) {
+  return [...laneLabels(), ...padLabels(profile), ...eggLabels(), sphinxLabel(sphinxStock)]
 }

@@ -53,6 +53,8 @@ export const useGame = create((set, get) => ({
   throwResult: null,
   /** Active hatch animation: { eggId, pets }. */
   hatch: null,
+  /** Keep hatching the egg you're standing at (the T button). Client-side only. */
+  autoHatch: false,
 
   toasts: [],
 
@@ -83,6 +85,7 @@ export const useGame = create((set, get) => ({
   clearThrowResult: () => set({ throwResult: null }),
 
   setHatch: (hatch) => set({ hatch }),
+  setAutoHatch: (autoHatch) => set({ autoHatch }),
 }))
 
 /** Non-reactive snapshot for timers and non-React code. */

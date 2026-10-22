@@ -36,10 +36,13 @@ const vertexShader = /* glsl */ `
   varying float vAlpha;
   void main() {
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
-    mv.xy += aCorner;
+    float d = -mv.z;
+    // Shrink when the camera gets close, so a sign never fills the screen, and fade
+    // right out at arm's length.
+    mv.xy += aCorner * clamp(d / 18.0, 0.4, 1.0);
     gl_Position = projectionMatrix * mv;
     float far = min(aFade, uMaxDistance);
-    vAlpha = 1.0 - smoothstep(far * 0.75, far, -mv.z);
+    vAlpha = (1.0 - smoothstep(far * 0.75, far, d)) * smoothstep(2.5, 6.0, d);
     vUv = uv;
   }
 `

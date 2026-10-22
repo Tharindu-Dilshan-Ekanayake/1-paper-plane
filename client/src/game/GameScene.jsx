@@ -9,6 +9,7 @@ import BlobShadows from './BlobShadows'
 import FollowCamera from './FollowCamera'
 import TrainingFX from './fx/TrainingFX'
 import WorldLabels from './labels/WorldLabels'
+import Pets, { SphinxShowcase } from './pets/Pets'
 import PlaneShop from './world/PlaneShop'
 import Lighting from './Lighting'
 import PerfProbe from './PerfProbe'
@@ -136,6 +137,8 @@ export function GameScene({ onReady }) {
         <World />
         <WorldLabels />
         <PlaneShop />
+        <SphinxShowcase />
+        <Pets />
         <Player onAvatarReady={handleAvatarReady} />
         <BlobShadows />
         <TrainingFX />

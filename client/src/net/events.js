@@ -27,6 +27,10 @@ export function handleServerEvent(type, payload) {
       beginFlight(payload)
       break
 
+    case 'hatch':
+      game.setHatch({ eggId: payload.eggId, pets: payload.pets, id: Date.now() })
+      break
+
     case 'toast':
       game.toast(payload.text, payload.kind)
       break

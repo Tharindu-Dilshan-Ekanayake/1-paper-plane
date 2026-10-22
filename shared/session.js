@@ -1,4 +1,4 @@
-import { LANES, PLANES, PRODUCTS, TRAIN_INTERVAL } from './balance.js'
+import { EGGS, ITEMS, LANES, MULTI_HATCH, PLANES, PRODUCTS, TRAIN_INTERVAL } from './balance.js'
 import {
   advanceTutorial,
   applyRebirth,
@@ -7,14 +7,19 @@ import {
   awardBadge,
   buyPlane,
   createSession,
+  deletePet,
+  equipBestPets,
+  equipPet,
   equipPlane,
   friendBoost,
   grantProduct,
+  hatchEgg,
   isLaneUnlocked,
   isMaxLevel,
   planeById,
+  unequipPet,
 } from './logic.js'
-import { inRect, inThrowArea, laneRect, PLANE_PADS, padRect } from './world.js'
+import { eggStandNear, inRect, inThrowArea, laneRect, PLANE_PADS, padRect } from './world.js'
 
 const PLANES_INDEX = Object.fromEntries(PLANES.map((p, i) => [p.id, i]))
 
@@ -37,6 +42,7 @@ const PAD_SLACK = 2
  * - 'profile'  { profile, session }  full state, after anything structural
  * - 'train'    { gain, power, level, levelProgress, leveledUp }  each training throw
  * - 'throw'    { distance, wins, trophies, duration, multiplier }  a throw to replay
+ * - 'hatch'    { eggId, pets: [{ uid, id }] }  pets to reveal
  * - 'toast'    { text, kind }
  * - 'badge'    { id, name }
  *
@@ -189,6 +195,46 @@ export class PlayerSession {
       if (result.ok) this.dirty = true
     },
 
+    hatch({ eggId, count }) {
+      const egg = EGGS[eggId]
+      if (!egg) return
+      const p = this.getPosition()
+      if (eggStandNear(p.x, p.z)?.eggId !== eggId) {
+        this.toast('Walk up to the egg to hatch it!', 'error')
+        return
+      }
+      if (!egg.cost.wins) {
+        this.toast(`The ${egg.name} Egg is premium - buy it from its stand!`)
+        return
+      }
+      const n = count === MULTI_HATCH ? MULTI_HATCH : 1
+      this.reveal(this.fail(hatchEgg(this.profile, eggId, n)))
+    },
+
+    openEggItem({ itemId }) {
+      const item = ITEMS[itemId]
+      if (!item || item.kind !== 'egg') return
+      this.reveal(this.fail(hatchEgg(this.profile, item.egg, 1, { paid: 'item' })))
+    },
+
+    equipPet({ uid }) {
+      if (this.fail(equipPet(this.profile, Number(uid))).ok) this.dirty = true
+    },
+
+    unequipPet({ uid }) {
+      unequipPet(this.profile, Number(uid))
+      this.dirty = true
+    },
+
+    equipBest() {
+      equipBestPets(this.profile)
+      this.dirty = true
+    },
+
+    deletePet({ uid }) {
+      if (deletePet(this.profile, Number(uid)).ok) this.dirty = true
+    },
+
     purchase({ productId }, now) {
       if (!this.mockPurchases) {
         this.toast('Purchases are coming soon!')
@@ -213,10 +259,19 @@ export class PlayerSession {
     if (!result.ok) return result
     this.dirty = true
     if (productId === 'skipRebirth') this.afterRebirth()
-    else this.toast(`Purchased ${product.name}!`, 'success')
-    this.afterGrant?.(result, now)
+    else if (!result.pets) this.toast(`Purchased ${product.name}!`, 'success')
+    this.reveal(result)
     if (this.dirty) this.sendProfile()
     return result
+  }
+
+  /** Sends newly gained pets to the client's hatch animation. */
+  reveal(result) {
+    if (!result?.ok || !result.pets?.length) return
+    this.dirty = true
+    this.emit('hatch', { eggId: result.eggId ?? null, pets: result.pets })
+    this.tutorial('hatch')
+    this.badge('firstPet')
   }
 
   afterRebirth() {

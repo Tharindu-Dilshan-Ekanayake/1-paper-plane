@@ -1,8 +1,10 @@
 import { useGame } from '../../store/game'
+import PetsPanel from './PetsPanel'
 import PurchasePanel from './PurchasePanel'
 import RebirthPanel from './RebirthPanel'
 
 const PANELS = {
+  pets: PetsPanel,
   rebirth: RebirthPanel,
   purchase: PurchasePanel,
 }

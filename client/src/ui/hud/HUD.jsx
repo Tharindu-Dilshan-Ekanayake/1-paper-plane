@@ -1,5 +1,6 @@
 import { useGame } from '../../store/game'
 import AutoRebirthToggle from './AutoRebirthToggle'
+import EggPanel from './EggPanel'
 import FlightOverlay from './FlightOverlay'
 import InteractPrompt from './InteractPrompt'
 import LeftMenu from './LeftMenu'
@@ -35,6 +36,7 @@ export function HUD() {
         {!watching && <AutoRebirthToggle />}
         <ThrowButton />
         <InteractPrompt />
+        <EggPanel />
         <FlightOverlay />
       </div>
       <Toasts />

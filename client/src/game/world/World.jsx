@@ -4,6 +4,7 @@ import { useQuality } from '../../store/quality'
 import { BlockSet, disposeBlocks, PropBuilder } from '../blocks'
 import { createToyMaterial, sharedMaterials } from '../materials'
 import { createGroundGeometry, createGroundMap } from './ground'
+import { buildEggStands } from './eggs'
 import { buildHangar, buildLanes } from './structures'
 import { buildTargets } from './targets'
 import { createThrowAreaDecal } from './throwArea'
@@ -53,6 +54,7 @@ export function World() {
 
     const propBuilder = new PropBuilder()
     buildTargets(propBuilder)
+    buildEggStands(set, propBuilder)
 
     const map = createGroundMap(maxTexture)
     const groundMaterial = createToyMaterial({ instanced: false, vertexColors: false, map, studScale: 2 })

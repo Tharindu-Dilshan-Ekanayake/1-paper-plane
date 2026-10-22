@@ -46,6 +46,12 @@ export const runtime = {
   /** What the sun's shadow box centres on while the camera chases a thrown plane. */
   flightFocus: null,
 
+  /**
+   * Other players' pets, written by the multiplayer layer: `{ id, position, yaw, hop }`
+   * per pet. Drawn by the same instanced pet meshes as yours.
+   */
+  remotePets: [],
+
   /** Walls that come and go at runtime, e.g. locked training lanes. */
   dynamicColliders: [],
 
