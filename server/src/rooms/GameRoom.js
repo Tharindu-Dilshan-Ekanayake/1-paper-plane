@@ -18,6 +18,8 @@ const SIM_HZ = 10
 const MOVE_SLACK = 2.5
 /** Close code used when the same player joins somewhere else (4000-4010 are Colyseus's own). */
 const DUPLICATE_LOGIN = 4100
+/** Names this server process in save ownership; Legion sets POD_NAME per pod. */
+const POD = process.env.POD_NAME || `local-${process.pid}`
 
 /** Unambiguous characters for lobby codes people read out to each other. */
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -39,7 +41,10 @@ export class GameRoom extends Room {
   maxClients = MAX_CLIENTS
   autoDispose = true
 
-  /** sessionId -> { session, playerId, lastPos, lastPosAt } */
+  /**
+   * sessionId -> { session, playerId, owner, lastPos, lastPosAt, kicked?, reconnection? }
+   * `owner` claims the player's save for this session (see db.js).
+   */
   members = new Map()
 
   onCreate(options = {}) {
@@ -78,16 +83,19 @@ export class GameRoom extends Room {
     return { playerId, name: cleanName(options?.name) }
   }
 
-  onJoin(client, _options, auth) {
+  async onJoin(client, _options, auth) {
     const { playerId, name } = client.auth || auth
 
-    // Same account joining again (new tab, refresh before the reconnect window
-    // closed): the newest connection wins, the old one is saved and kicked.
+    // Same account joining again (a refresh, a new tab, a reconnect the old session
+    // hasn't noticed yet): the newest connection wins. The old one is saved and removed
+    // at once, even when it's only a seat held open for a reconnect - otherwise a
+    // frozen copy of the player would stand in the lobby until that ran out.
     const existing = activePlayers.get(playerId)
-    if (existing) existing.room.kick(existing.client, 'You joined from another window.')
+    if (existing) await existing.room.evict(existing.client, 'You joined from another window.')
 
     const now = Date.now()
-    const profile = loadProfile(playerId, name)
+    const owner = `${POD}:${client.sessionId}`
+    const profile = await loadProfile(playerId, name, owner)
     const offline = applyOfflineProgress(profile, now)
 
     const player = new PlayerState()
@@ -115,7 +123,7 @@ export class GameRoom extends Room {
       },
     })
 
-    this.members.set(client.sessionId, { session, playerId, lastPos: { x: spawnX, z: spawnZ }, lastPosAt: now })
+    this.members.set(client.sessionId, { session, playerId, owner, lastPos: { x: spawnX, z: spawnZ }, lastPosAt: now })
     activePlayers.set(playerId, { room: this, client })
 
     session.sendProfile()
@@ -130,13 +138,17 @@ export class GameRoom extends Room {
   /** Dropped without saying goodbye (mobile network blip): hold the seat. */
   async onDrop(client) {
     const member = this.members.get(client.sessionId)
-    if (member?.kicked) return
+    if (!member || member.kicked) return
     // Stop training while away; the seat stays warm for the reconnect.
-    if (member) member.session.handle('leaveLane', {}, Date.now())
+    member.session.handle('leaveLane', {}, Date.now())
+    member.reconnection = this.allowReconnection(client, RECONNECT_SECONDS)
     try {
-      await this.allowReconnection(client, RECONNECT_SECONDS)
+      await member.reconnection
     } catch {
-      // Window expired; onLeave cleans up.
+      // Window expired, or the player came back as a new session (evict); onLeave
+      // cleans up.
+    } finally {
+      member.reconnection = null
     }
   }
 
@@ -148,44 +160,58 @@ export class GameRoom extends Room {
     member.session.sendProfile()
   }
 
-  onLeave(client) {
+  async onLeave(client) {
     const member = this.members.get(client.sessionId)
+    this.state.players.delete(client.sessionId)
     if (member) {
-      if (!member.kicked) saveProfile(member.session.profile)
       if (activePlayers.get(member.playerId)?.client === client) activePlayers.delete(member.playerId)
       this.members.delete(client.sessionId)
+      if (!member.kicked) await saveProfile(member.session.profile, member.owner)
     }
-    this.state.players.delete(client.sessionId)
     this.updateListing()
   }
 
-  onDispose() {
+  /**
+   * The pod is going away (a deploy, or scaling in): save everyone, then close with
+   * SERVER_SHUTDOWN, which sends each client back through the matchmaker to a pod
+   * that's staying.
+   */
+  async onBeforeShutdown() {
+    await this.saveAll()
+    super.onBeforeShutdown()
+  }
+
+  async onDispose() {
     clearInterval(this.autosave)
-    this.saveAll()
     liveRooms.delete(this)
+    await this.saveAll()
   }
 
   // --- Helpers -----------------------------------------------------------------------
 
-  /** Saves and removes a player who logged in elsewhere. */
-  kick(client, reason) {
+  /**
+   * Saves and removes a player who has joined again elsewhere: gone from everyone's
+   * view at once, and a seat held for their reconnect let go rather than left to run
+   * out.
+   */
+  async evict(client, reason) {
     const member = this.members.get(client.sessionId)
-    if (member) {
-      saveProfile(member.session.profile)
+    this.state.players.delete(client.sessionId)
+    if (member && !member.kicked) {
       member.kicked = true
+      await saveProfile(member.session.profile, member.owner)
+      member.reconnection?.reject(new Error('replaced by a new session'))
     }
-    client.send('kicked', { reason })
-    client.leave(DUPLICATE_LOGIN)
+    try {
+      client.send('kicked', { reason })
+      client.leave(DUPLICATE_LOGIN)
+    } catch {
+      // Already disconnected (the held-seat case).
+    }
   }
 
   saveAll() {
-    for (const member of this.members.values()) {
-      try {
-        saveProfile(member.session.profile)
-      } catch (err) {
-        console.error('[room] save failed', err)
-      }
-    }
+    return Promise.all([...this.members.values()].map((m) => (m.kicked ? null : saveProfile(m.session.profile, m.owner))))
   }
 
   updateListing() {

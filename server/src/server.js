@@ -3,22 +3,34 @@ import express from 'express'
 import { defineRoom, defineServer } from '@colyseus/core'
 import { WebSocketTransport } from '@colyseus/ws-transport'
 
-import { openDatabase } from './db.js'
+import { closeStorage, openStorage } from './db.js'
 import { startLeaderboards } from './leaderboards.js'
 import { activePlayers } from './registry.js'
 import { GameRoom } from './rooms/GameRoom.js'
 
-const PORT = Number(process.env.PORT || 3000)
+// Bloxity Legion injects PORT (HTTP and WebSocket share it); 2567 is Colyseus's usual.
+const PORT = Number(process.env.PORT || 2567)
 
-// Vite's dev server origin. Add the production origin(s) via CLIENT_ORIGINS.
+/**
+ * Browser origins allowed to call /api: Legion's CLIENT_ORIGIN (the game's site), the
+ * Bloxity-hosted frontends, extra ones from CLIENT_ORIGINS, and Vite dev servers.
+ */
+const gameId = process.env.BLOXITY_GAME_ID
 const ALLOWED_ORIGINS = [
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  ...(process.env.CLIENT_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean),
-]
+  process.env.CLIENT_ORIGIN,
+  gameId && `https://${gameId}.play.bloxity.io`,
+  gameId && `https://${gameId}.dev.play.bloxity.io`,
+  ...(process.env.CLIENT_ORIGINS || '').split(',').map((s) => s.trim()),
+  ...(process.env.NODE_ENV === 'production' ? [] : ['http://localhost:5173', 'http://localhost:5180', 'http://127.0.0.1:5180']),
+].filter(Boolean)
 
 /** HTTP endpoints next to the Colyseus matchmaker on the same port. */
 function routes(app) {
+  // Legion's readiness and liveness probes. Answers at once, whatever else is going on.
+  app.get('/health', (_req, res) => {
+    res.json({ ok: true })
+  })
+
   app.use('/api', cors({ origin: ALLOWED_ORIGINS, credentials: true }))
   app.use('/api', express.json())
 
@@ -39,7 +51,7 @@ function routes(app) {
   })
 }
 
-openDatabase()
+await openStorage()
 
 const server = defineServer({
   transport: new WebSocketTransport(),
@@ -50,6 +62,10 @@ const server = defineServer({
   greet: false,
 })
 
+// SIGTERM (a deploy or scale-in) runs Colyseus' graceful shutdown: every room saves
+// and hands its players to another pod (GameRoom.onBeforeShutdown), then this.
+server.onShutdown(() => closeStorage())
+
 await server.listen(PORT)
 startLeaderboards()
-console.log(`[server] listening on http://localhost:${PORT}`)
+console.log(`[server] listening on port ${PORT}${process.env.POD_NAME ? ` (${process.env.POD_NAME}, ${process.env.BLOXITY_CHANNEL})` : ''}`)

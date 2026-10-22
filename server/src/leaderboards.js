@@ -1,6 +1,5 @@
-import { topPlayers } from './db.js'
+import { getSphinxStock, refreshStock, saveProfile, topPlayers } from './db.js'
 import { activePlayers, broadcastAll } from './registry.js'
-import { saveProfile } from './db.js'
 
 const REFRESH_MS = 60_000
 let cached = { rebirths: [], playtime: [], power: [], updatedAt: 0 }
@@ -10,14 +9,24 @@ export function getLeaderboards() {
   return cached
 }
 
-function refresh() {
-  // Fold in progress from people still playing, so the boards aren't a save behind.
-  for (const { room, client } of activePlayers.values()) {
-    const member = room.members.get(client.sessionId)
-    if (member) saveProfile(member.session.profile)
+async function refresh() {
+  try {
+    // Fold in progress from people still playing here, so the boards aren't a save
+    // behind. Other pods do the same for theirs.
+    await Promise.all(
+      [...activePlayers.values()].map(({ room, client }) => {
+        const member = room.members.get(client.sessionId)
+        return member ? saveProfile(member.session.profile, member.owner) : null
+      }),
+    )
+    cached = { ...(await topPlayers(10)), updatedAt: Date.now() }
+    broadcastAll('leaderboards', cached)
+    // Sphinx sales on other pods.
+    const before = getSphinxStock()
+    if ((await refreshStock()) !== before) broadcastAll('stock', { sphinx: getSphinxStock() })
+  } catch (err) {
+    console.error('[leaderboards] refresh failed', err)
   }
-  cached = { ...topPlayers(10), updatedAt: Date.now() }
-  broadcastAll('leaderboards', cached)
 }
 
 export function startLeaderboards() {

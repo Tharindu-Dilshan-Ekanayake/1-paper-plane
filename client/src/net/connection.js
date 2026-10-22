@@ -1,3 +1,4 @@
+import { waitForSDK } from '../bloxity/sdk'
 import { runtime } from '../game/runtime'
 import { getGame } from '../store/game'
 import { setTransport } from './actions'
@@ -11,19 +12,27 @@ const JOIN_RETRIES = 4
 const RETRY_DELAY_MS = 4000
 /** Server code for "you joined from another window". */
 const DUPLICATE_LOGIN = 4100
+/** Matchmaker: give up and play offline after this long (it holds a cold start ~45 s). */
+const MATCHMAKER_GIVE_UP_MS = 60_000
+const MATCHMAKER_BACKOFF_MS = [1000, 2000, 4000, 8000, 10000]
 
 const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
 
 /**
- * Where the game server lives. `?offline` forces offline play; in development
- * `?server=` overrides; otherwise VITE_SERVER_URL, falling back to port 3000 on the
- * same host in dev. A production build without VITE_SERVER_URL plays offline.
+ * Where to play. `?offline` forces offline play, and in development `?server=` points
+ * straight at a server. A build with VITE_LEGION_GAME_ID (the hosted game on Bloxity
+ * Legion) goes through Legion's matchmaker, which picks a pod with room or starts one.
+ * Otherwise VITE_SERVER_URL, falling back to port 2567 on the same host in
+ * development; a production build with neither plays offline.
+ *
+ * @returns {{ kind: 'matchmaker', gameId: string } | { kind: 'direct', url: string } | null}
  */
-function serverUrl() {
+function serverTarget() {
   if (params.has('offline')) return null
-  if (import.meta.env.DEV && params.get('server')) return params.get('server')
-  if (import.meta.env.VITE_SERVER_URL) return import.meta.env.VITE_SERVER_URL
-  return import.meta.env.DEV ? `${window.location.protocol}//${window.location.hostname}:3000` : null
+  if (import.meta.env.DEV && params.get('server')) return { kind: 'direct', url: params.get('server') }
+  if (import.meta.env.VITE_LEGION_GAME_ID) return { kind: 'matchmaker', gameId: import.meta.env.VITE_LEGION_GAME_ID }
+  if (import.meta.env.VITE_SERVER_URL) return { kind: 'direct', url: import.meta.env.VITE_SERVER_URL }
+  return import.meta.env.DEV ? { kind: 'direct', url: `${window.location.protocol}//${window.location.hostname}:2567` } : null
 }
 
 let active = null
@@ -71,6 +80,14 @@ function join(client, options, lobby) {
 function attachRoom(room, identity, Callbacks) {
   const callbacks = Callbacks.get(room)
   let leaving = false
+
+  // Closing or refreshing the page leaves properly, so the server lets go of us at
+  // once instead of holding our seat (and a frozen copy of us) for a reconnect.
+  const onPageHide = () => {
+    leaving = true
+    room.leave(true)
+  }
+  window.addEventListener('pagehide', onPageHide)
 
   const syncLobby = () => {
     const players = room.state.players?.size ?? 1
@@ -147,6 +164,7 @@ function attachRoom(room, identity, Callbacks) {
   room.onDrop(() => getGame().setNet({ mode: 'connecting', message: 'Reconnecting…' }))
   room.onReconnect(syncLobby)
   room.onLeave((code) => {
+    window.removeEventListener('pagehide', onPageHide)
     clearInterval(posId)
     sendLook = () => {}
     clearRemotePlayers()
@@ -184,14 +202,18 @@ export async function startConnection(identity, lobby = { mode: 'public' }) {
   const gen = ++generation
   lastIdentity = identity
   stopConnection()
-  const url = serverUrl()
-  if (!url) {
+  const target = serverTarget()
+  if (!target) {
     startLocal(identity, null)
     return
   }
 
   getGame().setNet({ mode: 'connecting', message: 'Connecting…' })
-  if (!(await reachable(url))) {
+  if (target.kind === 'matchmaker') {
+    await joinThroughMatchmaker(gen, identity, target.gameId)
+    return
+  }
+  if (!(await reachable(target.url))) {
     if (gen !== generation) return
     startLocal(identity, 'Server unreachable - playing offline')
     return
@@ -201,7 +223,7 @@ export async function startConnection(identity, lobby = { mode: 'public' }) {
   // fetches it in parallel with the lobby rather than in front of it.
   const { Client, Callbacks } = await import('@colyseus/sdk')
   if (gen !== generation) return
-  const client = new Client(url)
+  const client = new Client(target.url)
   const options = { playerId: identity.id, name: identity.name }
   for (let attempt = 0; attempt <= JOIN_RETRIES; attempt += 1) {
     try {
@@ -222,6 +244,44 @@ export async function startConnection(identity, lobby = { mode: 'public' }) {
     }
   }
   startLocal(identity, 'Could not join a lobby - playing offline')
+}
+
+/**
+ * Hosted on Bloxity Legion: every attempt asks the matchmaker for a seat (it picks a
+ * pod with room, or cold-starts one), then joins the endpoint it returns with a NEW
+ * Client - each endpoint is pinned to one pod. Retries with backoff for up to a
+ * minute, then plays offline.
+ */
+async function joinThroughMatchmaker(gen, identity, gameId) {
+  const options = { playerId: identity.id, name: identity.name }
+  const started = performance.now()
+  const [{ Client, Callbacks }, sdk] = await Promise.all([import('@colyseus/sdk'), waitForSDK().catch(() => null)])
+  if (gen !== generation) return
+  if (!sdk?.net?.resolveEndpoint) {
+    startLocal(identity, 'Server unreachable - playing offline')
+    return
+  }
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      const { endpoint } = await sdk.net.resolveEndpoint(gameId)
+      if (gen !== generation) return
+      const room = await new Client(endpoint).joinOrCreate('game', options)
+      if (gen !== generation) {
+        room.leave(true)
+        return
+      }
+      attachRoom(room, identity, Callbacks)
+      return
+    } catch (err) {
+      if (gen !== generation) return
+      console.warn('[net] matchmaker join failed', err)
+      if (performance.now() - started > MATCHMAKER_GIVE_UP_MS) break
+      getGame().setNet({ mode: 'connecting', message: attempt === 0 ? 'Starting a server…' : 'Still connecting…' })
+      await wait(MATCHMAKER_BACKOFF_MS[Math.min(attempt, MATCHMAKER_BACKOFF_MS.length - 1)])
+      if (gen !== generation) return
+    }
+  }
+  startLocal(identity, 'Could not reach the game server - playing offline')
 }
 
 /** Moves to another lobby with the same identity (from the lobby panel). */
