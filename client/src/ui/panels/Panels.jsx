@@ -1,6 +1,7 @@
 import { useGame } from '../../store/game'
 import DailyRewardsPanel from './DailyRewardsPanel'
 import ItemsPanel from './ItemsPanel'
+import LobbyPanel from './LobbyPanel'
 import PetsPanel from './PetsPanel'
 import PurchasePanel from './PurchasePanel'
 import RebirthPanel from './RebirthPanel'
@@ -15,6 +16,7 @@ const PANELS = {
   rewards: RewardsPanel,
   items: ItemsPanel,
   offline: WelcomeBackPanel,
+  lobby: LobbyPanel,
 }
 
 /** Mounts whichever modal panel is open. Only one at a time, like the reference. */

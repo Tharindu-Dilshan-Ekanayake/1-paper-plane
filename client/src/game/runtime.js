@@ -52,6 +52,12 @@ export const runtime = {
    */
   remotePets: [],
 
+  /**
+   * Other players' throws to replay as ghost planes:
+   * `{ sid, distance, duration, planeId, x, z, startedAt }`.
+   */
+  ghostThrows: [],
+
   /** Walls that come and go at runtime, e.g. locked training lanes. */
   dynamicColliders: [],
 

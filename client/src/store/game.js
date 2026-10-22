@@ -65,6 +65,9 @@ export const useGame = create((set, get) => ({
   patchProfile: (patch) => set((s) => ({ profile: { ...s.profile, ...patch } })),
   setNet: (patch) => set((s) => ({ net: { ...s.net, ...patch } })),
   setZone: (zone) => set({ zone }),
+  setFriends: (friends) => set({ friends }),
+  setSphinxStock: (sphinxStock) => set({ sphinxStock }),
+  setLeaderboards: (leaderboards) => set({ leaderboards }),
 
   openPanel: (panel, panelData = null) => set({ panel, panelData }),
   closePanel: () => set({ panel: null, panelData: null }),

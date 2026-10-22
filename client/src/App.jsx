@@ -5,6 +5,7 @@ import GameScene from './game/GameScene'
 import HatchOverlay from './ui/HatchOverlay'
 import HUD from './ui/hud/HUD'
 import LoadingScreen from './ui/LoadingScreen'
+import NameplateLayer from './ui/NameplateLayer'
 import Panels from './ui/panels/Panels'
 import PopupLayer from './ui/PopupLayer'
 import TouchControls from './ui/TouchControls'
@@ -17,6 +18,7 @@ function App() {
     <div className="relative h-full w-full select-none overflow-hidden">
       <GameController />
       <GameScene onReady={handleReady} />
+      <NameplateLayer />
       <PopupLayer />
       <TouchControls />
       <HUD />

@@ -29,9 +29,9 @@ function LobbyBadge() {
   const openPanel = useGame((s) => s.openPanel)
   const label =
     net.mode === 'online'
-      ? `Lobby ${net.players}/${net.maxPlayers}`
+      ? `${net.isPrivate ? net.code : 'Lobby'} ${net.players}/${net.maxPlayers}`
       : net.mode === 'connecting'
-        ? 'Connecting…'
+        ? net.message || 'Connecting…'
         : 'Offline'
   return (
     <button
