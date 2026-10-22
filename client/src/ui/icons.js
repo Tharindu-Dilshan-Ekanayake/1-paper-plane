@@ -41,24 +41,39 @@ const trophy = svg(
   vgrad('tr-g', GOLD),
 )
 
+/**
+ * Rebirth: two chasing arrows in a ring, pink on top and ice-blue below, each with a
+ * darker underside for a chunky 3D look. The blue arrow is the pink one turned 180 degrees
+ * about the ring's centre (50, 46).
+ */
+const REBIRTH_ARC = 'M20.5 40.8A30 30 0 0 1 73 26.7'
+const REBIRTH_HEAD = '83.7,17.7 83.3,39 62.3,35.7'
+const REBIRTH_SHINE = 'M19 34.7A33 33 0 0 1 45.4 13.3'
+
+/** One arrow's shape in a given fill; `turn` rotates it about the ring's centre. */
+const rebirthShape = (fill, turn, shine) => `
+  <g transform="${turn}" stroke-linejoin="round" stroke-linecap="round">
+    <path d="${REBIRTH_ARC}" fill="none" stroke="${OUT}" stroke-width="21"/>
+    <polygon points="${REBIRTH_HEAD}" fill="${OUT}" stroke="${OUT}" stroke-width="10"/>
+    <path d="${REBIRTH_ARC}" fill="none" stroke="${fill}" stroke-width="12"/>
+    <polygon points="${REBIRTH_HEAD}" fill="${fill}"/>
+    ${shine ? `<path d="${REBIRTH_SHINE}" fill="none" stroke="${shine}" stroke-width="3.5" opacity=".8"/>` : ''}
+  </g>`
+
+const rebirthArrow = (fill, side, shine, turn) =>
+  `<g transform="translate(0 6)">${rebirthShape(side, turn, '')}</g>${rebirthShape(`url(#${fill})`, turn, shine)}`
+
 const rebirth = svg(
-  `<path d="M16 66A36 36 0 0 1 82 26" fill="none" stroke="${OUT}" stroke-width="17" stroke-linecap="round"/>
-  <path d="M16 66A36 36 0 0 1 82 26" fill="none" stroke="url(#rb-a)" stroke-width="9" stroke-linecap="round"/>
-  <path d="M71 10l24 9-15 20z" fill="#5be3ff" stroke="${OUT}" stroke-width="5" stroke-linejoin="round"/>
-  <circle cx="52" cy="58" r="31" fill="url(#rb-w)" stroke="${OUT}" stroke-width="5.5"/>
-  <path d="M21 58a31 31 0 0 1 62 0z" fill="url(#rb-r)" stroke="${OUT}" stroke-width="5.5" stroke-linejoin="round"/>
-  <path d="M21 58h62" stroke="${OUT}" stroke-width="6"/>
-  <circle cx="52" cy="58" r="9" fill="#fff" stroke="${OUT}" stroke-width="5"/>
-  <path d="M33 43c4-8 11-12 18-13" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".7"/>`,
-  vgrad('rb-r', [
-    [0, '#ff7a96'],
-    [1, '#e0123f'],
+  rebirthArrow('rb-b', '#3b8fe0', '#ffffff', 'rotate(180 50 46)') +
+    rebirthArrow('rb-p', '#c8186a', '#ffe3ee', ''),
+  vgrad('rb-p', [
+    [0, '#ffa6c4'],
+    [1, '#f0457f'],
   ]) +
-    vgrad('rb-w', [
-      [0, '#ffffff'],
-      [1, '#cfd9e6'],
-    ]) +
-    `<linearGradient id="rb-a" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1fa3ff"/><stop offset="1" stop-color="#7ff0ff"/></linearGradient>`,
+    vgrad('rb-b', [
+      [0, '#f2fbff'],
+      [1, '#8ad0ff'],
+    ]),
 )
 
 const muscle = svg(
