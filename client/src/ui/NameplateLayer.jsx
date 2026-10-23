@@ -4,7 +4,10 @@ import { NAMEPLATE_POOL_SIZE, registerNameplateElements } from '../game/remote/n
 
 const SLOTS = Array.from({ length: NAMEPLATE_POOL_SIZE }, (_, i) => i)
 
-/** DOM side of the other players' name tags; positioned by the 3D frame loop. */
+/**
+ * DOM side of the other players' name tags; positioned by the 3D frame loop. Chunky
+ * white lettering in the game's font with a thick dark outline and a drop under it.
+ */
 export function NameplateLayer() {
   const refs = useRef([])
   useEffect(() => {
@@ -18,16 +21,23 @@ export function NameplateLayer() {
           ref={(el) => {
             refs.current[i] = el
           }}
-          className="absolute left-0 top-0 whitespace-nowrap text-white"
+          className="pp-text"
           style={{
+            // Inline, so .pp-text's position: relative can't override it.
+            position: 'absolute',
+            left: 0,
+            top: 0,
             display: 'none',
-            fontFamily: 'system-ui, sans-serif',
-            fontWeight: 600,
-            fontSize: 'max(11px, calc(var(--px) * 20))',
-            textShadow: '0 1px 2px rgba(0,0,0,0.85)',
+            fontSize: 'max(15px, calc(var(--px) * 32))',
+            letterSpacing: '0.02em',
             willChange: 'transform',
           }}
-        />
+        >
+          {/* An outlined copy behind and a clean white one on top, like StrokeText: one
+              element with a thick text-stroke draws stray bits of outline on phones. */}
+          <span className="pp-text-stroke" style={{ WebkitTextStrokeWidth: '0.24em', WebkitTextStrokeColor: '#121218', color: '#121218' }} />
+          <span className="pp-text-fill" style={{ color: '#ffffff' }} />
+        </div>
       ))}
     </div>
   )
