@@ -7,9 +7,12 @@ export const NAMEPLATE_POOL_SIZE = 8
 
 const pool = []
 
+/** Each tag is a container holding an outline copy and a fill copy of the name. */
 export function registerNameplateElements(elements) {
   pool.length = 0
-  for (const el of elements) if (el) pool.push({ el, text: '', shown: false })
+  for (const el of elements) {
+    if (el) pool.push({ el, copies: [...el.children], text: '', shown: false })
+  }
 }
 
 /** Shows slot `i` at screen (x, y) with `text`; null x hides it. */
@@ -25,7 +28,7 @@ export function placeNameplate(i, text, x, y, alpha = 1) {
   }
   if (slot.text !== text) {
     slot.text = text
-    slot.el.textContent = text
+    for (const copy of slot.copies) copy.textContent = text
   }
   if (!slot.shown) {
     slot.el.style.display = 'block'

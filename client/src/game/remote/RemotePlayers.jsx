@@ -220,7 +220,8 @@ export function RemotePlayers() {
       // Name tag.
       if (plate < NAMEPLATE_POOL_SIZE) {
         if (visible && distance < settings.remoteNameDistance) {
-          _v.set(r.position.x, r.position.y + 2.25, r.position.z).project(camera)
+          // Just above the head (players are 1.8 tall).
+          _v.set(r.position.x, r.position.y + 2.05, r.position.z).project(camera)
           if (_v.z < 1) {
             const fade = Math.min(1, (settings.remoteNameDistance - distance) / 6)
             placeNameplate(plate, r.name, (_v.x * 0.5 + 0.5) * size.width, (-_v.y * 0.5 + 0.5) * size.height, fade)
