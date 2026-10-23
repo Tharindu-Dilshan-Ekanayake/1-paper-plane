@@ -2,92 +2,96 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import { Vector3 } from 'three'
 
-/** How high above the player's origin the camera aims. */
-const LOOK_HEIGHT = 1.4
+import { runtime } from './runtime'
 
-const MIN_DISTANCE = 3
-const MAX_DISTANCE = 20
-const START_DISTANCE = 8
+/** How high above the player's feet the camera aims. */
+const LOOK_HEIGHT = 1.6
+
+const MIN_DISTANCE = 4
+const MAX_DISTANCE = 26
 
 // Pitch limits, in radians. Stops the camera flipping over the top or sinking
-// under the track.
-const MIN_PITCH = -0.15
-const MAX_PITCH = 1.25
-const START_PITCH = 0.32
+// under the ground.
+const MIN_PITCH = -0.05
+const MAX_PITCH = 1.2
 
 const DRAG_SENSITIVITY = 0.005
-const ZOOM_SENSITIVITY = 0.01
+const TOUCH_SENSITIVITY = 0.007
+const ZOOM_SENSITIVITY = 0.012
 
-// Higher = snappier. Framerate-independent via the pow() smoothing below.
-const POSITION_SMOOTHING = 4
-const LOOK_SMOOTHING = 8
+// Higher = snappier. Framerate-independent via the exp() smoothing below.
+const POSITION_SMOOTHING = 10
+const LOOK_SMOOTHING = 14
 
 const _desired = new Vector3()
 const _target = new Vector3()
 
 /**
- * Third-person orbit camera.
+ * Third-person orbit camera around the player.
  *
- * Trails the player's rigid body, easing both position and look-at target.
- * Right-click drag orbits, the mouse wheel zooms.
+ * Mouse: drag (either button) orbits, wheel zooms. Touch: one-finger drag orbits (the
+ * joystick owns the left side of the screen as a separate element), pinch zooms.
  *
- * Reads the Rapier body directly rather than React state - the body is the
- * authoritative transform and updates every physics step, not every render.
- *
- * @param {{ bodyRef: React.MutableRefObject<any> }} props
+ * Orbit state lives in `runtime.camera`, so the flight sequence can hand the camera
+ * back exactly where it took it from.
  */
-export function FollowCamera({ bodyRef }) {
+export function FollowCamera() {
   const camera = useThree((s) => s.camera)
   const gl = useThree((s) => s.gl)
-
-  // Spherical offset from the player. A ref, not state: pointer events write to it
-  // every mousemove and the frame loop reads it - re-rendering would be wasteful.
-  const orbit = useRef({ yaw: 0, pitch: START_PITCH, distance: START_DISTANCE })
   const lookAt = useRef(new Vector3())
   const initialised = useRef(false)
 
   useEffect(() => {
     const el = gl.domElement
-    if (!el) return
+    if (!el) return undefined
 
-    let dragging = false
-    let lastX = 0
-    let lastY = 0
+    /** pointerId -> last { x, y } */
+    const pointers = new Map()
+    let pinchDistance = 0
+
+    const orbit = runtime.camera
 
     const onPointerDown = (e) => {
-      if (e.button !== 2) return // right button only
-      dragging = true
-      lastX = e.clientX
-      lastY = e.clientY
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
       el.setPointerCapture?.(e.pointerId)
+      if (pointers.size === 2) {
+        const [a, b] = [...pointers.values()]
+        pinchDistance = Math.hypot(a.x - b.x, a.y - b.y)
+      }
     }
 
     const onPointerMove = (e) => {
-      if (!dragging) return
-      const dx = e.clientX - lastX
-      const dy = e.clientY - lastY
-      lastX = e.clientX
-      lastY = e.clientY
+      const last = pointers.get(e.pointerId)
+      if (!last) return
 
-      const o = orbit.current
-      o.yaw -= dx * DRAG_SENSITIVITY
-      o.pitch = Math.min(MAX_PITCH, Math.max(MIN_PITCH, o.pitch + dy * DRAG_SENSITIVITY))
+      if (pointers.size >= 2) {
+        last.x = e.clientX
+        last.y = e.clientY
+        const [a, b] = [...pointers.values()]
+        const d = Math.hypot(a.x - b.x, a.y - b.y)
+        orbit.distance = Math.min(MAX_DISTANCE, Math.max(MIN_DISTANCE, orbit.distance - (d - pinchDistance) * 0.04))
+        pinchDistance = d
+        return
+      }
+
+      const dx = e.clientX - last.x
+      const dy = e.clientY - last.y
+      last.x = e.clientX
+      last.y = e.clientY
+      const sensitivity = e.pointerType === 'touch' ? TOUCH_SENSITIVITY : DRAG_SENSITIVITY
+      orbit.yaw -= dx * sensitivity
+      orbit.pitch = Math.min(MAX_PITCH, Math.max(MIN_PITCH, orbit.pitch + dy * sensitivity))
     }
 
     const endDrag = (e) => {
-      if (!dragging) return
-      dragging = false
+      pointers.delete(e.pointerId)
       el.releasePointerCapture?.(e.pointerId)
     }
 
     const onWheel = (e) => {
       // Without this the page scrolls behind the canvas.
       e.preventDefault()
-      const o = orbit.current
-      o.distance = Math.min(
-        MAX_DISTANCE,
-        Math.max(MIN_DISTANCE, o.distance + e.deltaY * ZOOM_SENSITIVITY),
-      )
+      orbit.distance = Math.min(MAX_DISTANCE, Math.max(MIN_DISTANCE, orbit.distance + e.deltaY * ZOOM_SENSITIVITY))
     }
 
     // Right-dragging otherwise opens the browser context menu mid-orbit.
@@ -111,34 +115,40 @@ export function FollowCamera({ bodyRef }) {
     }
   }, [gl])
 
-  useFrame((_state, delta) => {
-    const body = bodyRef.current
-    if (!body) return
+  useFrame((_state, rawDelta) => {
+    if (runtime.camera.mode !== 'follow') {
+      // Whoever owns the camera now is moving it; pick up smoothly when it's handed back.
+      lookAt.current.copy(runtime.player.position).setY(runtime.player.position.y + LOOK_HEIGHT)
+      return
+    }
+    const delta = Math.min(rawDelta, 0.05)
+    const p = runtime.player.position
+    _target.set(p.x, p.y + LOOK_HEIGHT, p.z)
 
-    const pos = body.translation()
-    _target.set(pos.x, pos.y, pos.z)
-
-    // Spherical -> cartesian. yaw 0 puts the camera behind the player on +Z.
-    const { yaw, pitch, distance } = orbit.current
+    // Spherical -> cartesian. yaw 0 puts the camera south of the player, looking north.
+    const { yaw, pitch, distance } = runtime.camera
     const horizontal = Math.cos(pitch) * distance
     _desired.set(
       _target.x + Math.sin(yaw) * horizontal,
-      _target.y + Math.sin(pitch) * distance + LOOK_HEIGHT,
+      Math.max(_target.y + Math.sin(pitch) * distance, 0.6),
       _target.z + Math.cos(yaw) * horizontal,
     )
+
+    // After a flight the camera is kilometres away; jump back rather than swoop.
+    if (runtime.camera.snap) {
+      runtime.camera.snap = false
+      initialised.current = false
+    }
 
     if (!initialised.current) {
       // Avoid a long swoop in from wherever the default camera started.
       camera.position.copy(_desired)
-      lookAt.current.copy(_target).setY(_target.y + LOOK_HEIGHT)
+      lookAt.current.copy(_target)
       initialised.current = true
     }
 
-    // 1 - pow(x, delta) keeps the easing rate consistent across framerates.
-    camera.position.lerp(_desired, 1 - Math.pow(0.001, delta * (POSITION_SMOOTHING / 10)))
-
-    _target.y += LOOK_HEIGHT
-    lookAt.current.lerp(_target, 1 - Math.pow(0.001, delta * (LOOK_SMOOTHING / 10)))
+    camera.position.lerp(_desired, 1 - Math.exp(-POSITION_SMOOTHING * delta))
+    lookAt.current.lerp(_target, 1 - Math.exp(-LOOK_SMOOTHING * delta))
     camera.lookAt(lookAt.current)
   })
 

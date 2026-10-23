@@ -4,11 +4,12 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Power Per Click</title>
+    <meta name="theme-color" content="#2f8ff2" />
+    <title>+1 Frisbee</title>
 
-    <!-- Bloxity SDK. Exposes itself as window.Legion.SDK.
-         Must load before the Vite entry script below. -->
-    <script src="https://sdk.bloxity.io/v1/legion-sdk.min.js"></script>
+    <!-- Bloxity SDK. Exposes itself as window.Legion.SDK. Async so it never blocks the
+         first paint; src/bloxity/sdk.js waits for it to appear. -->
+    <script async src="https://sdk.bloxity.io/v1/legion-sdk.min.js"></script>
   </head>
   <body>
     <div id="root"></div>

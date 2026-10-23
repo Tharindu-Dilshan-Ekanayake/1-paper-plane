@@ -1,17 +1,26 @@
 import { useFrame, useThree } from '@react-three/fiber'
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import {
   BackSide,
   BufferAttribute,
   Color,
   IcosahedronGeometry,
+  InstancedMesh,
+  Matrix4,
+  MeshBasicMaterial,
+  Quaternion,
   Triangle,
   Vector3,
 } from 'three'
 
-import { CLOUDS, LIGHTS, SKY } from './sceneStyle'
+import { mulberry32 } from '@shared/rng'
 
-const SKY_RADIUS = 450
+import { useQuality } from '../store/quality'
+import { CLOUDS, LIGHTS } from './sceneStyle'
+import { skyUniforms } from './skyState'
+
+/** Unit dome, scaled to just inside the camera's far plane for the current preset. */
+const SKY_RADIUS = 1
 
 /** Centre of the cloud field: the middle of the track. */
 const CLOUD_CENTER = [0, 0, -80]
@@ -50,23 +59,16 @@ const skyFragmentShader = /* glsl */ `
 function SkyDome() {
   const ref = useRef(null)
   const camera = useThree((s) => s.camera)
-
-  const uniforms = useMemo(
-    () => ({
-      topColor: { value: new Color(SKY.top) },
-      horizonColor: { value: new Color(SKY.horizon) },
-      exponent: { value: SKY.exponent },
-    }),
-    [],
-  )
+  const radius = useQuality((s) => s.settings.viewDistance) * 0.9
+  const uniforms = skyUniforms
 
   useFrame(() => {
     ref.current?.position.copy(camera.position)
   })
 
   return (
-    <mesh ref={ref} renderOrder={-1} frustumCulled={false}>
-      <sphereGeometry args={[SKY_RADIUS, 32, 16]} />
+    <mesh ref={ref} renderOrder={-1} frustumCulled={false} scale={radius}>
+      <sphereGeometry args={[SKY_RADIUS, 24, 12]} />
       <shaderMaterial
         side={BackSide}
         depthWrite={false}
@@ -76,17 +78,6 @@ function SkyDome() {
       />
     </mesh>
   )
-}
-
-/** Small seeded PRNG, so the cloud layout is the same on every load. */
-function mulberry32(seed) {
-  let a = seed
-  return () => {
-    a = (a + 0x6d2b79f5) | 0
-    let t = Math.imul(a ^ (a >>> 15), 1 | a)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
 }
 
 /**
@@ -167,7 +158,7 @@ function buildCloudLayout(count) {
     })
 
     clouds.push({
-      position: [(rand() * 2 - 1) * 220, 36 + rand() * 16, (rand() * 2 - 1) * 260],
+      position: [(rand() * 2 - 1) * 240, 50 + rand() * 18, (rand() * 2 - 1) * 280],
       rotationY: rand() * Math.PI,
       puffs,
     })
@@ -176,29 +167,59 @@ function buildCloudLayout(count) {
   return clouds
 }
 
+/**
+ * Every puff of every cloud in one InstancedMesh: a single draw call for the whole
+ * sky, where one mesh per puff cost ~100.
+ */
 function Clouds() {
-  const ref = useRef(null)
-  const geometry = useMemo(() => createPuffGeometry(), [])
-  const layout = useMemo(() => buildCloudLayout(CLOUDS.count), [])
+  const count = useQuality((s) => s.settings.cloudCount)
 
+  const mesh = useMemo(() => {
+    const layout = buildCloudLayout(count)
+    const puffs = []
+    const cloudQuat = new Quaternion()
+    const yAxis = new Vector3(0, 1, 0)
+    for (const cloud of layout) {
+      cloudQuat.setFromAxisAngle(yAxis, cloud.rotationY)
+      for (const puff of cloud.puffs) {
+        const local = new Vector3(...puff.position).applyQuaternion(cloudQuat)
+        puffs.push({
+          position: local.add(new Vector3(...cloud.position)),
+          quaternion: cloudQuat.clone(),
+          scale: new Vector3(...puff.scale),
+        })
+      }
+    }
+
+    // fog off: the clouds sit past the fog's far distance and would vanish.
+    const instanced = new InstancedMesh(
+      createPuffGeometry(),
+      new MeshBasicMaterial({ vertexColors: true, fog: false }),
+      puffs.length,
+    )
+    const matrix = new Matrix4()
+    puffs.forEach((p, i) => instanced.setMatrixAt(i, matrix.compose(p.position, p.quaternion, p.scale)))
+    instanced.instanceMatrix.needsUpdate = true
+    instanced.computeBoundingSphere()
+    instanced.position.set(...CLOUD_CENTER)
+    return instanced
+  }, [count])
+
+  useEffect(
+    () => () => {
+      mesh.geometry.dispose()
+      mesh.material.dispose()
+      mesh.dispose()
+    },
+    [mesh],
+  )
+
+  const ref = useRef(null)
   useFrame((_state, delta) => {
     if (ref.current) ref.current.rotation.y += delta * CLOUD_DRIFT
   })
 
-  return (
-    <group ref={ref} position={CLOUD_CENTER}>
-      {layout.map((cloud, i) => (
-        <group key={i} position={cloud.position} rotation={[0, cloud.rotationY, 0]}>
-          {cloud.puffs.map((puff, p) => (
-            <mesh key={p} geometry={geometry} position={puff.position} scale={puff.scale}>
-              {/* fog off: the clouds sit past the fog's far distance and would vanish. */}
-              <meshBasicMaterial vertexColors fog={false} />
-            </mesh>
-          ))}
-        </group>
-      ))}
-    </group>
-  )
+  return <primitive ref={ref} object={mesh} />
 }
 
 /** Gradient sky plus drifting low-poly clouds. */

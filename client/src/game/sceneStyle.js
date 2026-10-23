@@ -1,6 +1,6 @@
 /**
  * The scene's whole look in one place: a bright toy-brick world with a saturated blue
- * sky, lime studded baseplate, tan checker brick walls and orange wooden fences.
+ * sky, pale lime studded plaza, tan paths and terraced dirt hills with grass caps.
  *
  * Colours are sRGB hex, exactly as you would pick them in an image editor.
  *
@@ -12,61 +12,57 @@
 
 export const SKY = {
   /** Straight up. */
-  top: '#2a8af5',
+  top: '#2f8ff2',
   /** At eye level. Fog uses the same colour so distant ground melts into the sky. */
-  horizon: '#86c8fb',
+  horizon: '#a6d6fb',
   /** Lower = the deep blue reaches further down towards the horizon. */
-  exponent: 0.3,
+  exponent: 0.35,
 }
 
-/** Just a light haze at the far end of the track. */
 export const FOG = {
   color: SKY.horizon,
-  near: 120,
-  far: 420,
 }
 
 export const CLOUDS = {
   /** Sunlit tops. */
   top: '#ffffff',
   /** Undersides, a cool blue-grey. */
-  bottom: '#cfdff2',
-  count: 18,
+  bottom: '#d6e5f5',
 }
 
-/** Neon lime baseplate, two shades in a checker. */
-export const GROUND = {
-  base: '#5cee30',
-  alt: '#52de2b',
-}
-
-/** Tan checker brick for the boundary walls. */
-export const WALLS = {
-  base: '#c4955c',
-  alt: '#a3774a',
-}
-
-export const FENCE = {
-  rail: '#c8662e',
-  post: '#a8501f',
+/** Every surface colour in the lobby. */
+export const PALETTE = {
+  plaza: '#c3ec86',
+  path: '#f3d57e',
+  pathEdge: '#e5a94f',
+  apron: '#acdff5',
+  apronEdge: '#e6f6fd',
+  shopFloor: '#e7eef6',
+  lawn: '#66cf4b',
+  sidewalk: '#dadada',
+  dirt: '#c99a5f',
+  trunk: '#7c4d29',
+  leaves: ['#33cc3a', '#3fd63f', '#2ec236'],
+  white: '#f4f7fb',
+  water: '#4cc3ff',
 }
 
 export const LIGHTS = {
   /** Fill from above (sky) and below (bounce off the grass). */
   hemiSky: '#ffffff',
-  hemiGround: '#b7c9a3',
+  hemiGround: '#b9cba6',
   hemiIntensity: 2.1,
 
   sunColor: '#fff6e8',
-  sunIntensity: 1.7,
+  sunIntensity: 1.65,
   /**
    * Direction *towards* the sun: high and a little to the left, behind the default
    * camera, so the side of the character you look at is lit and its shadow falls
    * beside it where you can see it, not hidden behind its back.
    */
-  sunDirection: [-0.35, 0.9, 0.2],
+  sunDirection: [-0.35, 0.9, 0.25],
   /** 1 = shadows get no sunlight at all; lower = lighter shadows. */
-  shadowIntensity: 0.8,
+  shadowIntensity: 0.7,
   /** Blur radius of shadow edges, in shadow-map texels. */
-  shadowSoftness: 4,
+  shadowSoftness: 3,
 }
