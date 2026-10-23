@@ -1,11 +1,7 @@
 import { useThree } from '@react-three/fiber'
 import { useEffect } from 'react'
 
-import { CLICK_INTERVAL } from '@shared/balance'
-
-import { actions } from '../net/actions'
-import { getGame } from '../store/game'
-import { runtime } from './runtime'
+import { throwFromHand } from './throwFromHand'
 
 /** A press shorter and stiller than this is a click; anything else is a camera drag. */
 const CLICK_MS = 350
@@ -14,8 +10,7 @@ const CLICK_SLOP_PX = 8
 /**
  * Click throws: a click or tap on the world (not a drag, and not on the HUD, which
  * sits above the canvas) throws the frisbee from your hand for a x1 training throw,
- * anywhere outside the throw area. The authority rate-limits and pays out; this only
- * sends the intent, and no faster than it could count.
+ * anywhere outside the throw area (see throwFromHand).
  */
 export function ClickThrow() {
   const gl = useThree((s) => s.gl)
@@ -24,7 +19,6 @@ export function ClickThrow() {
     const el = gl.domElement
     /** pointerId -> { x, y, t, moved } */
     const presses = new Map()
-    let lastSent = -Infinity
 
     const onDown = (e) => {
       if (e.pointerType === 'mouse' && e.button !== 0) return
@@ -39,12 +33,8 @@ export function ClickThrow() {
       presses.delete(e.pointerId)
       // A drag, a long press, or one finger of a pinch.
       if (!press || press.moved || presses.size > 0) return
-      const now = performance.now()
-      if (now - press.t > CLICK_MS || now - lastSent < CLICK_INTERVAL * 1000) return
-      const game = getGame()
-      if (game.panel || game.zone.throwArea || game.flight || game.throwResult || runtime.camera.mode !== 'follow') return
-      lastSent = now
-      actions.click()
+      if (performance.now() - press.t > CLICK_MS) return
+      throwFromHand()
     }
     const onCancel = (e) => presses.delete(e.pointerId)
 
