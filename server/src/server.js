@@ -35,7 +35,8 @@ function routes(app) {
   app.use('/api', express.json())
 
   app.get('/api/health', (_req, res) => {
-    res.json({ ok: true, players: activePlayers.size })
+    // `game` lets a development client tell this server from another project's.
+    res.json({ ok: true, game: 'frisbee', players: activePlayers.size })
   })
 
   /**

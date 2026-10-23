@@ -22,17 +22,32 @@ const params = new URLSearchParams(typeof window !== 'undefined' ? window.locati
  * Where to play. `?offline` forces offline play, and in development `?server=` points
  * straight at a server. A build with VITE_LEGION_GAME_ID (the hosted game on Bloxity
  * Legion) goes through Legion's matchmaker, which picks a pod with room or starts one.
- * Otherwise VITE_SERVER_URL, falling back to port 2567 on the same host in
- * development; a production build with neither plays offline.
+ * Otherwise VITE_SERVER_URL; in development, this game's server on the same host
+ * (see findDevServer). A production build with neither plays offline.
  *
- * @returns {{ kind: 'matchmaker', gameId: string } | { kind: 'direct', url: string } | null}
+ * @returns {{ kind: 'matchmaker', gameId: string } | { kind: 'direct', url: string } | { kind: 'dev' } | null}
  */
 function serverTarget() {
   if (params.has('offline')) return null
   if (import.meta.env.DEV && params.get('server')) return { kind: 'direct', url: params.get('server') }
   if (import.meta.env.VITE_LEGION_GAME_ID) return { kind: 'matchmaker', gameId: import.meta.env.VITE_LEGION_GAME_ID }
   if (import.meta.env.VITE_SERVER_URL) return { kind: 'direct', url: import.meta.env.VITE_SERVER_URL }
-  return import.meta.env.DEV ? { kind: 'direct', url: `${window.location.protocol}//${window.location.hostname}:2567` } : null
+  return import.meta.env.DEV ? { kind: 'dev' } : null
+}
+
+/**
+ * Local development: the game server's usual port, then 3000, where older server .env
+ * files put it. Only a server that says it's this game counts (or an older build of it,
+ * which said nothing), so another project's server on one of those ports is skipped.
+ */
+const DEV_PORTS = [2567, 3000]
+async function findDevServer() {
+  for (const port of DEV_PORTS) {
+    const url = `${window.location.protocol}//${window.location.hostname}:${port}`
+    const health = await healthOf(url)
+    if (health?.ok && (health.game === 'frisbee' || (health.game === undefined && 'players' in health))) return url
+  }
+  return null
 }
 
 let active = null
@@ -54,12 +69,13 @@ export function shareLook(equipped, proportions) {
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 
-async function reachable(url) {
+/** The server's /api/health answer, or null if it can't be reached. */
+async function healthOf(url) {
   try {
     const res = await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(2500) })
-    return res.ok
+    return res.ok ? await res.json() : null
   } catch {
-    return false
+    return null
   }
 }
 
@@ -220,8 +236,9 @@ export async function startConnection(identity, lobby = { mode: 'public' }) {
     await joinThroughMatchmaker(gen, identity, target.gameId)
     return
   }
-  if (!(await reachable(target.url))) {
-    if (gen !== generation) return
+  const url = target.kind === 'dev' ? await findDevServer() : (await healthOf(target.url)) && target.url
+  if (gen !== generation) return
+  if (!url) {
     startLocal(identity, 'Server unreachable - playing offline')
     return
   }
@@ -230,7 +247,7 @@ export async function startConnection(identity, lobby = { mode: 'public' }) {
   // fetches it in parallel with the lobby rather than in front of it.
   const { Client, Callbacks } = await import('@colyseus/sdk')
   if (gen !== generation) return
-  const client = new Client(target.url)
+  const client = new Client(url)
   const options = { playerId: identity.id, name: identity.name }
   for (let attempt = 0; attempt <= JOIN_RETRIES; attempt += 1) {
     try {
