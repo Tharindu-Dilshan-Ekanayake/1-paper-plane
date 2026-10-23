@@ -23,11 +23,15 @@ export const PRESETS = {
     cloudCount: 8,
     /** Max side of any generated texture. */
     maxTexture: 512,
-    /** Remote players beyond this are not drawn at all. */
-    remoteDrawDistance: 40,
-    /** How many of the nearest other players get their real avatar (the rest are blocky). */
+    /**
+     * Other players are drawn this far away - the whole lobby, as the blocky figures
+     * are one draw call for everybody - and the nearest `remoteAvatars` of them within
+     * `remoteAvatarDistance` as their real avatar.
+     */
+    remoteDrawDistance: 150,
     remoteAvatars: 3,
-    remoteNameDistance: 18,
+    remoteAvatarDistance: 45,
+    remoteNameDistance: 40,
     /** World labels fade out past this. */
     labelDistance: 70,
     /** How much of the track's side scenery to spawn (0-1). */
@@ -46,9 +50,10 @@ export const PRESETS = {
     fogNear: 100,
     cloudCount: 14,
     maxTexture: 1024,
-    remoteDrawDistance: 60,
+    remoteDrawDistance: 150,
     remoteAvatars: 5,
-    remoteNameDistance: 28,
+    remoteAvatarDistance: 60,
+    remoteNameDistance: 55,
     labelDistance: 110,
     decorDensity: 0.75,
     frisbeeGlow: 1,
@@ -64,9 +69,10 @@ export const PRESETS = {
     fogNear: 140,
     cloudCount: 18,
     maxTexture: 1024,
-    remoteDrawDistance: 60,
+    remoteDrawDistance: 150,
     remoteAvatars: 7,
-    remoteNameDistance: 35,
+    remoteAvatarDistance: 80,
+    remoteNameDistance: 70,
     labelDistance: 150,
     decorDensity: 1,
     frisbeeGlow: 1,

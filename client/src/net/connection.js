@@ -80,6 +80,8 @@ function join(client, options, lobby) {
 function attachRoom(room, identity, Callbacks) {
   const callbacks = Callbacks.get(room)
   let leaving = false
+  /** Set when the same account joined from another window and took over. */
+  let replaced = false
 
   // Closing or refreshing the page leaves properly, so the server lets go of us at
   // once instead of holding our seat (and a frozen copy of us) for a reconnect.
@@ -121,6 +123,7 @@ function attachRoom(room, identity, Callbacks) {
         break
       case 'kicked':
         leaving = true
+        replaced = true
         break
       default:
         handleServerEvent(type, payload)
@@ -168,7 +171,11 @@ function attachRoom(room, identity, Callbacks) {
     clearInterval(posId)
     sendLook = () => {}
     clearRemotePlayers()
-    if (leaving || code === DUPLICATE_LOGIN) {
+    if (replaced || code === DUPLICATE_LOGIN) {
+      getGame().setNet({ mode: 'replaced', message: 'Playing in another window' })
+      return
+    }
+    if (leaving) {
       getGame().setNet({ mode: 'offline', message: 'Disconnected' })
       return
     }
@@ -282,6 +289,11 @@ async function joinThroughMatchmaker(gen, identity, gameId) {
     }
   }
   startLocal(identity, 'Could not reach the game server - playing offline')
+}
+
+/** Takes the game back after another window of the same account replaced this one. */
+export function playHere() {
+  if (lastIdentity) startConnection(lastIdentity)
 }
 
 /** Moves to another lobby with the same identity (from the lobby panel). */

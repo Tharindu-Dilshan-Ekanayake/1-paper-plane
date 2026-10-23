@@ -8,13 +8,19 @@ const GUEST_KEY = 'pp.guestId'
 /** Don't hold the game hostage to a slow SDK script: play as guest after this. */
 const SDK_GRACE_MS = 4000
 
-/** A stable per-browser id for players who haven't logged in. */
+/**
+ * A stable per-browser id for players who haven't logged in - so every tab of one
+ * browser is the same guest, and a new tab takes over from the last. `?tabguest` in
+ * the URL gives the tab a guest of its own instead (kept across its reloads), for
+ * trying several players from one browser.
+ */
 function guestId() {
   try {
-    let id = localStorage.getItem(GUEST_KEY)
+    const storage = new URLSearchParams(window.location.search).has('tabguest') ? sessionStorage : localStorage
+    let id = storage.getItem(GUEST_KEY)
     if (!id) {
       id = `guest-${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}`
-      localStorage.setItem(GUEST_KEY, id)
+      storage.setItem(GUEST_KEY, id)
     }
     return id
   } catch {

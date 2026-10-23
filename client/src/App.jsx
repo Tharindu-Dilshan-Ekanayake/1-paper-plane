@@ -10,6 +10,7 @@ import NameplateLayer from './ui/NameplateLayer'
 import { prefetchPanels } from './ui/panels/panelLoaders'
 import Panels from './ui/panels/Panels'
 import PopupLayer from './ui/PopupLayer'
+import ReplacedOverlay from './ui/ReplacedOverlay'
 import TouchControls from './ui/TouchControls'
 
 function App() {
@@ -42,6 +43,7 @@ function App() {
           <HatchOverlay />
         </>
       )}
+      <ReplacedOverlay />
       <LoadingScreen done={ready} />
     </div>
   )

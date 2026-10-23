@@ -75,7 +75,7 @@ function RemoteAvatar({ sessionId, look }) {
 
 /**
  * The other players nearest the camera, as their real avatars: as many as the quality
- * preset allows (`remoteAvatars`), within its draw distance. Everyone else stays the
+ * preset allows (`remoteAvatars`), within `remoteAvatarDistance`. Everyone else is the
  * cheap blocky figure RemotePlayers draws (`r.fullAvatar` tells it who's covered).
  * Chosen twice a second, never per frame, so React only re-renders when the set of
  * players (or an outfit) actually changes.
@@ -91,7 +91,7 @@ export function RemoteAvatars() {
       for (const r of remotePlayers.values()) {
         r.fullAvatar = false
         const d = camera.position.distanceTo(r.position)
-        if (d < settings.remoteDrawDistance) near.push([d, r])
+        if (d < settings.remoteAvatarDistance) near.push([d, r])
       }
       near.sort((a, b) => a[0] - b[0])
       const next = near
